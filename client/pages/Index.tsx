@@ -47,9 +47,17 @@ export default function Index() {
   }, []);
 
   async function loadPublic() {
-    const res = await fetch("/api/videos/public");
-    const data = await res.json();
-    setVideos(data.videos ?? []);
+    try {
+      const res = await fetch("/api/videos/public");
+      if (!res.ok) {
+        console.error(`Erro ao carregar vídeos públicos: HTTP ${res.status}`);
+        return;
+      }
+      const data = await res.json();
+      setVideos(data.videos ?? []);
+    } catch (error) {
+      console.error("Erro ao carregar vídeos públicos:", error);
+    }
   }
 
   const [thumb, setThumb] = useState<string | null>(null);
@@ -440,10 +448,18 @@ function MuxNotice() {
   const [configured, setConfigured] = useState<boolean | null>(null);
   useEffect(() => {
     (async () => {
-      const res = await fetch("/api/videos/config");
-      const data = await res.json();
-      setConfigured(!!data.muxConfigured);
-    })().catch(() => setConfigured(false));
+      try {
+        const res = await fetch("/api/videos/config");
+        if (!res.ok) {
+          setConfigured(false);
+          return;
+        }
+        const data = await res.json();
+        setConfigured(!!data.muxConfigured);
+      } catch {
+        setConfigured(false);
+      }
+    })();
   }, []);
 
   if (configured === null) return null;

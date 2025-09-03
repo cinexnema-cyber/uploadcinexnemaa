@@ -452,9 +452,18 @@ async function onDelete(id: string, setItems: (rows: any) => void) {
     headers: { Authorization: `Bearer ${token}` },
   });
   if (!res.ok) return toast.error("Erro ao excluir");
-  const list = await fetch("/api/creators/videos", {
-    headers: { Authorization: `Bearer ${token}` },
-  });
-  const data = await list.json();
-  setItems(data.videos ?? []);
+
+  try {
+    const list = await fetch("/api/creators/videos", {
+      headers: { Authorization: `Bearer ${token}` },
+    });
+    if (!list.ok) {
+      console.error("Erro ao recarregar lista de vídeos");
+      return;
+    }
+    const data = await list.json();
+    setItems(data.videos ?? []);
+  } catch (error) {
+    console.error("Erro ao recarregar lista:", error);
+  }
 }
