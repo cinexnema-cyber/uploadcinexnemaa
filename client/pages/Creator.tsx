@@ -4,6 +4,7 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
 import { toast } from "sonner";
+import { uploadFile, ensureBucketExists } from "@/lib/supabase-upload";
 
 interface VideoRow {
   id: string;
@@ -40,9 +41,14 @@ export default function Creator() {
           <p className="text-white/70 text-sm">
             Conecte o Supabase para habilitar login e recursos do criador.
           </p>
-          <p className="text-white/60 text-xs">
-            Configure as variáveis VITE_SUPABASE_URL e VITE_SUPABASE_ANON_KEY.
-          </p>
+          <div className="flex gap-2 justify-center">
+            <Button
+              onClick={() => window.location.href = "/supabase-diagnostic"}
+              className="bg-purple-500 hover:bg-purple-500/90 text-white"
+            >
+              🔧 Diagnosticar
+            </Button>
+          </div>
         </div>
       </div>
     );
@@ -62,21 +68,20 @@ function Auth() {
     setLoading(true);
     
     try {
-      console.log("Iniciando processo de autenticação para:", email);
+      console.log("🔐 Iniciando processo de autenticação para:", email);
       
       // Primeiro, tenta fazer login
-      console.log("Tentando fazer login...");
       const { data: signInData, error: signInError } = await supabase.auth.signInWithPassword({
         email,
         password,
       });
       
       if (signInError) {
-        console.log("Erro no login:", signInError.message);
+        console.log("⚠️ Erro no login:", signInError.message);
         
         // Se as credenciais são inválidas, tenta criar a conta
         if (signInError.message.includes("Invalid login credentials")) {
-          console.log("Credenciais inválidas, tentando criar conta...");
+          console.log("🆕 Tentando criar conta...");
           
           const { data: signUpData, error: signUpError } = await supabase.auth.signUp({
             email,
@@ -84,7 +89,7 @@ function Auth() {
           });
           
           if (signUpError) {
-            console.error("Erro ao criar conta:", signUpError);
+            console.error("❌ Erro ao criar conta:", signUpError);
             if (signUpError.message.includes("already registered")) {
               toast.error("Conta já existe, mas senha pode estar incorreta. Verifique sua senha.");
             } else {
@@ -93,33 +98,33 @@ function Auth() {
             return;
           }
           
-          console.log("Conta criada:", signUpData);
+          console.log("✅ Conta criada:", signUpData);
           
-          // Se a conta foi criada, verifica se precisa de confirmação
+          // Se a conta foi criada mas não logou automaticamente
           if (signUpData.user && !signUpData.session) {
-            toast.success("Conta criada! Verifique seu email para confirmar.");
+            toast.success("Conta criada! Verifique seu email para confirmar (ou desabilite confirmação no Supabase).");
             return;
           }
           
-          // Se já está logado após criar conta
+          // Se logou automaticamente após criar
           if (signUpData.session) {
-            console.log("Login automático após criação da conta");
-            toast.success("Conta criada e login realizado com sucesso!");
+            console.log("🎉 Login automático após criação da conta");
+            toast.success("Conta criada e login realizado automaticamente!");
             return;
           }
           
           // Tenta fazer login novamente após criar a conta
-          console.log("Tentando login após criação da conta...");
-          const { data: retrySignIn, error: retryError } = await supabase.auth.signInWithPassword({
+          console.log("🔄 Tentando login após criar conta...");
+          const { data: retryData, error: retryError } = await supabase.auth.signInWithPassword({
             email,
             password,
           });
           
           if (retryError) {
-            console.error("Erro no segundo login:", retryError);
+            console.error("❌ Erro no segundo login:", retryError);
             toast.error("Conta criada, mas erro no login: " + retryError.message);
           } else {
-            console.log("Login bem-sucedido após criação:", retrySignIn);
+            console.log("✅ Login bem-sucedido após criação:", retryData);
             toast.success("Conta criada e login realizado!");
           }
           
@@ -128,12 +133,12 @@ function Auth() {
           toast.error("Erro no login: " + signInError.message);
         }
       } else {
-        console.log("Login realizado com sucesso:", signInData);
+        console.log("✅ Login realizado com sucesso:", signInData);
         toast.success("Login realizado com sucesso!");
       }
       
     } catch (err: any) {
-      console.error("Erro geral na autenticação:", err);
+      console.error("❌ Erro geral na autenticação:", err);
       toast.error("Erro inesperado: " + err.message);
     }
     
@@ -193,22 +198,30 @@ function Auth() {
 
         <div className="bg-blue-500/10 border border-blue-500/20 rounded-lg p-4 text-center">
           <p className="text-blue-400 text-sm font-medium mb-2">Tendo problemas?</p>
-          <div className="flex gap-2 justify-center">
+          <div className="flex gap-2 justify-center flex-wrap">
             <Button
               size="sm"
               variant="outline"
               className="border-blue-500/20 text-blue-400 text-xs"
               onClick={() => window.location.href = "/diagnostic-auth"}
             >
-              🔍 Diagnóstico
+              🔍 Debug Auth
             </Button>
             <Button
               size="sm"
               variant="outline"
-              className="border-blue-500/20 text-blue-400 text-xs"
-              onClick={() => window.location.href = "/test-auth"}
+              className="border-purple-500/20 text-purple-400 text-xs"
+              onClick={() => window.location.href = "/supabase-diagnostic"}
             >
-              🧪 Teste Completo
+              🔧 Debug Storage
+            </Button>
+            <Button
+              size="sm"
+              variant="outline"
+              className="border-green-500/20 text-green-400 text-xs"
+              onClick={() => window.location.href = "/test-upload"}
+            >
+              🧪 Teste Upload
             </Button>
           </div>
         </div>
@@ -271,32 +284,37 @@ function Dashboard() {
 
   async function uploadCoverNow() {
     if (!cover) return;
+    
     try {
-      const token = (await supabase?.auth.getSession())?.data.session?.access_token;
-      const fd = new FormData();
-      fd.append("file", cover);
-      const res = await fetch("/api/creators/cover", {
-        method: "POST",
-        headers: { Authorization: `Bearer ${token}` },
-        body: fd,
+      setProgress(10);
+      
+      // Garantir que bucket exists
+      await ensureBucketExists("covers", true);
+      
+      setProgress(30);
+      
+      // Upload usando nova biblioteca
+      const result = await uploadFile(cover, {
+        bucket: "covers",
+        folder: "creator-covers",
+        maxSize: 10 * 1024 * 1024 // 10MB
       });
       
-      if (!res.ok) {
-        let errorMessage = "Erro ao enviar capa";
-        try {
-          const errorData = await res.json();
-          errorMessage = errorData?.message || errorMessage;
-        } catch {
-          // Se falhar ao ler o JSON, usa a mensagem padrão
-        }
-        return toast.error(errorMessage);
+      setProgress(80);
+      
+      if (!result.success) {
+        throw new Error(result.error || "Erro no upload da capa");
       }
       
-      const data = await res.json();
-      setCoverUrl(data.url);
-      toast.success("Capa enviada");
-    } catch (error) {
-      toast.error("Erro ao enviar capa");
+      setCoverUrl(result.data!.publicUrl);
+      setProgress(100);
+      toast.success("Capa enviada com sucesso!");
+      
+    } catch (error: any) {
+      console.error("❌ Erro no upload da capa:", error);
+      toast.error("Erro ao enviar capa: " + error.message);
+    } finally {
+      setProgress(0);
     }
   }
 
@@ -306,71 +324,58 @@ function Dashboard() {
     setProgress(0);
 
     try {
-      const token = (await supabase?.auth.getSession())?.data.session?.access_token;
+      console.log("🎬 Iniciando upload de vídeo:", video.name);
       
-      // 1. Criar upload
-      const createRes = await fetch("/api/creators/upload", {
+      // 1. Garantir que buckets existem
+      setProgress(10);
+      await ensureBucketExists("videos", false);
+      
+      // 2. Upload do vídeo
+      setProgress(20);
+      const videoResult = await uploadFile(video, {
+        bucket: "videos",
+        folder: "creator-videos",
+        maxSize: 500 * 1024 * 1024 // 500MB
+      });
+      
+      if (!videoResult.success) {
+        throw new Error(videoResult.error || "Erro no upload do vídeo");
+      }
+      
+      setProgress(80);
+      
+      // 3. Salvar metadados
+      const token = (await supabase?.auth.getSession())?.data.session?.access_token;
+      const saveRes = await fetch("/api/videos/submit", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
           Authorization: `Bearer ${token}`,
         },
         body: JSON.stringify({
-          titulo: title,
-          descricao: description,
-          formato: format,
-          generos: genres,
-          capaUrl: coverUrl,
-          duracaoMinutos: parseInt(duration) || 0,
+          title,
+          bio: description,
+          format,
+          genres,
+          publicUrl: videoResult.data!.publicUrl,
+          bucket: videoResult.data!.path.split('/')[0],
+          path: videoResult.data!.path,
         }),
       });
       
-      if (!createRes.ok) {
-        let errorMessage = "Falha ao iniciar upload";
+      if (!saveRes.ok) {
+        let errorMessage = "Erro ao salvar metadados";
         try {
-          const errorData = await createRes.json();
-          errorMessage = errorData?.error || errorMessage;
+          const errorData = await saveRes.json();
+          errorMessage = errorData?.message || errorData?.error || errorMessage;
         } catch {
           // Se falhar ao ler o JSON, usa a mensagem padrão
         }
         throw new Error(errorMessage);
       }
       
-      const { uploadUrl, uploadToken, videoId } = await createRes.json();
-
-      // 2. Upload direto via signed URL
-      setProgress(50);
-      const uploadRes = await fetch(uploadUrl, {
-        method: "PUT",
-        body: video,
-        headers: {
-          "Content-Type": video.type,
-          "Authorization": `Bearer ${uploadToken}`,
-        },
-      });
-
-      if (!uploadRes.ok) {
-        throw new Error("Falha no upload do arquivo");
-      }
-
-      setProgress(90);
-
-      // 3. Completar upload
-      const completeRes = await fetch("/api/creators/upload-complete", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`,
-        },
-        body: JSON.stringify({ videoId }),
-      });
-
-      if (!completeRes.ok) {
-        throw new Error("Falha ao completar upload");
-      }
-
       setProgress(100);
-      toast.success("Upload concluído!");
+      toast.success("Upload concluído com sucesso!");
       
       // Reset form
       setTitle("");
@@ -385,7 +390,9 @@ function Dashboard() {
       
       await load();
       await loadDashboard();
+      
     } catch (e: any) {
+      console.error("❌ Erro no upload:", e);
       toast.error(e?.message || String(e));
     } finally {
       setIsUploading(false);
@@ -415,6 +422,13 @@ function Dashboard() {
               className="bg-emerald-500 hover:bg-emerald-500/90 text-black"
             >
               📋 Upload Completo
+            </Button>
+            <Button
+              onClick={() => window.location.href = "/test-upload"}
+              variant="outline"
+              className="border-green-500 text-green-400"
+            >
+              🧪 Teste Upload
             </Button>
             <Button
               variant="outline"
