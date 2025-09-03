@@ -8,10 +8,19 @@ export default function Admin() {
 
   async function load() {
     setLoading(true);
-    const res = await fetch("/api/videos");
-    const data = await res.json();
-    setVideos(data.videos ?? []);
-    setLoading(false);
+    try {
+      const res = await fetch("/api/videos");
+      if (!res.ok) {
+        console.error(`Erro ao carregar vídeos: HTTP ${res.status}`);
+        return;
+      }
+      const data = await res.json();
+      setVideos(data.videos ?? []);
+    } catch (error) {
+      console.error("Erro ao carregar vídeos:", error);
+    } finally {
+      setLoading(false);
+    }
   }
 
   useEffect(() => {
