@@ -140,11 +140,20 @@ function Uploader() {
       headers: { Authorization: `Bearer ${token}` },
       body: fd,
     });
-    const data = await res.json();
+
     if (!res.ok) {
-      toast.error(data?.message || "Erro ao enviar capa");
+      let errorMessage = "Erro ao enviar capa";
+      try {
+        const errorData = await res.json();
+        errorMessage = errorData?.message || errorMessage;
+      } catch {
+        // Se falhar ao ler o JSON, usa a mensagem padrão
+      }
+      toast.error(errorMessage);
       return null;
     }
+
+    const data = await res.json();
     return data.url as string;
   }
 
@@ -199,9 +208,19 @@ function Uploader() {
           coverUrl: url,
         }),
       });
+
+      if (!start.ok) {
+        let errorMessage = "Falha ao iniciar upload";
+        try {
+          const errorData = await start.json();
+          errorMessage = errorData?.error || errorMessage;
+        } catch {
+          // Se falhar ao ler o JSON, usa a mensagem padrão
+        }
+        throw new Error(errorMessage);
+      }
+
       const payload = await start.json();
-      if (!start.ok)
-        throw new Error(payload?.error || "Falha ao iniciar upload");
       const { uploadUrl, uploadId } = payload as {
         uploadUrl: string;
         uploadId: string;
