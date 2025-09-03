@@ -50,6 +50,12 @@ function Layout() {
               Conteúdos
             </Link>
             <Link
+              to="/upload-complete"
+              className="px-3 py-2 rounded-md text-emerald-400 hover:text-emerald-300 hover:bg-white/10"
+            >
+              📋 Upload
+            </Link>
+            <Link
               to="/admin"
               className="px-3 py-2 rounded-md text-white/80 hover:text-white hover:bg-white/10"
             >
