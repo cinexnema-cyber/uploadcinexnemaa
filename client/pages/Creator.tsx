@@ -61,16 +61,45 @@ function Auth() {
     e.preventDefault();
     if (!supabase) return;
     setLoading(true);
-    
-    if (isSignUp) {
-      const { error } = await supabase.auth.signUp({ email, password });
-      if (error) toast.error(error.message);
-      else toast.success("Conta criada. Verifique seu email e faça login.");
-    } else {
-      const { error } = await supabase.auth.signInWithPassword({ email, password });
-      if (error) toast.error(error.message);
+
+    try {
+      if (isSignUp) {
+        console.log("Tentando criar conta para:", email);
+        const { data, error } = await supabase.auth.signUp({ email, password });
+        console.log("Resultado signUp:", { data, error });
+
+        if (error) {
+          console.error("Erro no signUp:", error);
+          toast.error(error.message);
+        } else {
+          console.log("Conta criada com sucesso:", data);
+          toast.success("Conta criada. Faça login para continuar.");
+          setIsSignUp(false);
+        }
+      } else {
+        console.log("Tentando fazer login para:", email);
+        const { data, error } = await supabase.auth.signInWithPassword({ email, password });
+        console.log("Resultado signIn:", { data, error });
+
+        if (error) {
+          console.error("Erro no signIn:", error);
+
+          // Se usuário não existe, sugerir criar conta
+          if (error.message.includes("Invalid login credentials")) {
+            toast.error("Credenciais inválidas. Tente criar uma conta primeiro.");
+          } else {
+            toast.error(error.message);
+          }
+        } else {
+          console.log("Login realizado com sucesso:", data);
+          toast.success("Login realizado com sucesso!");
+        }
+      }
+    } catch (err: any) {
+      console.error("Erro geral na autenticação:", err);
+      toast.error("Erro inesperado: " + err.message);
     }
-    
+
     setLoading(false);
   }
 
