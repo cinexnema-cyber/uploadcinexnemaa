@@ -128,9 +128,19 @@ export default function Index() {
           path: uploaded.path,
         }),
       });
+
+      if (!save.ok) {
+        let errorMessage = `HTTP ${save.status}`;
+        try {
+          const errorData = await save.json();
+          errorMessage = errorData?.message || errorData?.error || errorMessage;
+        } catch {
+          // Se falhar ao ler o JSON, usa a mensagem padrão
+        }
+        throw new Error(errorMessage);
+      }
+
       const data = await save.json();
-      if (!save.ok)
-        throw new Error(data?.message || data?.error || `HTTP ${save.status}`);
 
       toast.success("Upload concluído!");
       setFile(null);

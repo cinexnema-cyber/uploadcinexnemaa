@@ -156,8 +156,19 @@ function Dashboard() {
       headers: { Authorization: `Bearer ${token}` },
       body: fd,
     });
+
+    if (!res.ok) {
+      let errorMessage = "Erro ao enviar capa";
+      try {
+        const errorData = await res.json();
+        errorMessage = errorData?.message || errorMessage;
+      } catch {
+        // Se falhar ao ler o JSON, usa a mensagem padrão
+      }
+      return toast.error(errorMessage);
+    }
+
     const data = await res.json();
-    if (!res.ok) return toast.error(data?.message || "Erro ao enviar capa");
     setCoverUrl(data.url);
     toast.success("Capa enviada");
   }
@@ -188,12 +199,21 @@ function Dashboard() {
           coverUrl,
         }),
       });
-      const payload = await start.json();
+
       if (!start.ok) {
-        toast.error(payload?.error || "Falha ao iniciar upload");
+        let errorMessage = "Falha ao iniciar upload";
+        try {
+          const errorData = await start.json();
+          errorMessage = errorData?.error || errorMessage;
+        } catch {
+          // Se falhar ao ler o JSON, usa a mensagem padrão
+        }
+        toast.error(errorMessage);
         setIsUploading(false);
         return;
       }
+
+      const payload = await start.json();
       const { uploadUrl, uploadId } = payload as {
         uploadUrl: string;
         uploadId: string;

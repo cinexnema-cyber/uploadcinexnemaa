@@ -38,9 +38,19 @@ export async function uploadVideoViaSignedUrl(
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ bucket, filename: file.name, prefix }),
   });
+
+  if (!res.ok) {
+    let errorMessage = `HTTP ${res.status}`;
+    try {
+      const errorData = await res.json();
+      errorMessage = errorData?.message || errorData?.error || errorMessage;
+    } catch {
+      // Se falhar ao ler o JSON, usa a mensagem padrão
+    }
+    throw new Error(errorMessage);
+  }
+
   const cfg = await res.json();
-  if (!res.ok)
-    throw new Error(cfg?.message || cfg?.error || `HTTP ${res.status}`);
 
   const { error } = await supabase.storage
     .from(bucket)
