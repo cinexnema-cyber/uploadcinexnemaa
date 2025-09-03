@@ -1,52 +1,37 @@
-import fs from "node:fs";
-import path from "node:path";
 import type { RequestHandler } from "express";
-import type { VideoRecord } from "../../shared/api";
-
-// Simple JSON file store for demo purposes
-const DATA_DIR = path.join(process.cwd(), "server", "data");
-const DATA_PATH = path.join(DATA_DIR, "videos.json");
-
-function ensureStore() {
-  if (!fs.existsSync(DATA_DIR)) fs.mkdirSync(DATA_DIR, { recursive: true });
-  if (!fs.existsSync(DATA_PATH))
-    fs.writeFileSync(DATA_PATH, JSON.stringify([]));
-}
-
-function readAll(): VideoRecord[] {
-  ensureStore();
-  const raw = fs.readFileSync(DATA_PATH, "utf8");
-  try {
-    const list = JSON.parse(raw) as VideoRecord[];
-    return Array.isArray(list) ? list : [];
-  } catch {
-    return [];
-  }
-}
-
-function writeAll(list: VideoRecord[]) {
-  ensureStore();
-  fs.writeFileSync(DATA_PATH, JSON.stringify(list, null, 2));
-}
+import { getAdminClient } from "../supabase";
 
 export const listPublic: RequestHandler = async (_req, res) => {
-  const all = readAll();
-  const published = all
-    .filter((v) => v.approved && !!v.publicUrl)
-    .sort((a, b) => (a.createdAt < b.createdAt ? 1 : -1));
-  res.json({ videos: published });
+  const sb = getAdminClient();
+  if (!sb) return res.status(400).json({ error: "SUPABASE_NOT_CONFIGURED" });
+  
+  const { data, error } = await sb
+    .from("videos")
+    .select("*")
+    .eq("aprovado", true)
+    .order("created_at", { ascending: false });
+    
+  if (error) return res.status(500).json({ error: error.message });
+  res.json({ videos: data ?? [] });
 };
 
 export const listAll: RequestHandler = async (_req, res) => {
-  const all = readAll().sort((a, b) => (a.createdAt < b.createdAt ? 1 : -1));
-  res.json({ videos: all });
+  const sb = getAdminClient();
+  if (!sb) return res.status(400).json({ error: "SUPABASE_NOT_CONFIGURED" });
+  
+  const { data, error } = await sb
+    .from("videos")
+    .select("*")
+    .order("created_at", { ascending: false });
+    
+  if (error) return res.status(500).json({ error: error.message });
+  res.json({ videos: data ?? [] });
 };
 
-function genId() {
-  return Date.now().toString(36) + "-" + Math.random().toString(36).slice(2, 8);
-}
-
 export const submit: RequestHandler = async (req, res) => {
+  const sb = getAdminClient();
+  if (!sb) return res.status(400).json({ error: "SUPABASE_NOT_CONFIGURED" });
+  
   const {
     title,
     bio,
@@ -72,52 +57,79 @@ export const submit: RequestHandler = async (req, res) => {
       .status(400)
       .json({ error: "BAD_REQUEST", message: "publicUrl é obrigatório" });
 
-  const record: VideoRecord = {
-    id: genId(),
-    title: title?.trim() || "Vídeo sem título",
-    createdAt: new Date().toISOString(),
-    status: "ready",
-    approved: false,
-    bio: bio?.trim() || null,
-    format: format ?? null,
-    genres: Array.isArray(genres) ? genres : null,
-    project: project?.trim() || null,
-    publicUrl,
-    storageBucket: bucket || null,
-    storagePath: storagePath || null,
-  };
+  try {
+    const { data: video, error } = await sb
+      .from("videos")
+      .insert({
+        creator_id: null, // Upload público, sem criador específico
+        titulo: title?.trim() || "Vídeo sem título",
+        descricao: bio?.trim() || null,
+        formato: format || null,
+        generos: Array.isArray(genres) ? genres : null,
+        video_url: publicUrl,
+        bucket: bucket || null,
+        video_path: storagePath || null,
+        status: "uploaded",
+        aprovado: false
+      })
+      .select()
+      .single();
 
-  const all = readAll();
-  all.push(record);
-  writeAll(all);
+    if (error) {
+      return res.status(500).json({ 
+        error: "DATABASE_ERROR", 
+        message: error.message 
+      });
+    }
 
-  res.json({ video: record });
+    res.json({ video });
+  } catch (e: any) {
+    res.status(500).json({
+      error: "SUBMIT_FAILED",
+      message: e?.message || String(e),
+    });
+  }
 };
 
 export const approveVideo: RequestHandler = async (req, res) => {
+  const sb = getAdminClient();
+  if (!sb) return res.status(400).json({ error: "SUPABASE_NOT_CONFIGURED" });
+  
   const { id } = req.params as { id: string };
-  const all = readAll();
-  const idx = all.findIndex((v) => v.id === id);
-  if (idx === -1) return res.status(404).json({ error: "NOT_FOUND" });
-  all[idx] = {
-    ...all[idx],
-    approved: true,
-    status: all[idx].status === "ready" ? "approved" : all[idx].status,
-  };
-  writeAll(all);
-  res.json({ video: all[idx] });
+  
+  const { data: video, error } = await sb
+    .from("videos")
+    .update({ aprovado: true })
+    .eq("id", id)
+    .select()
+    .single();
+    
+  if (error) return res.status(500).json({ error: error.message });
+  if (!video) return res.status(404).json({ error: "NOT_FOUND" });
+  
+  res.json({ video });
 };
 
 export const revokeVideo: RequestHandler = async (req, res) => {
+  const sb = getAdminClient();
+  if (!sb) return res.status(400).json({ error: "SUPABASE_NOT_CONFIGURED" });
+  
   const { id } = req.params as { id: string };
-  const all = readAll();
-  const idx = all.findIndex((v) => v.id === id);
-  if (idx === -1) return res.status(404).json({ error: "NOT_FOUND" });
-  all[idx] = {
-    ...all[idx],
-    approved: false,
-    status: all[idx].status === "approved" ? "ready" : all[idx].status,
-  };
-  writeAll(all);
-  res.json({ video: all[idx] });
+  
+  const { data: video, error } = await sb
+    .from("videos")
+    .update({ aprovado: false })
+    .eq("id", id)
+    .select()
+    .single();
+    
+  if (error) return res.status(500).json({ error: error.message });
+  if (!video) return res.status(404).json({ error: "NOT_FOUND" });
+  
+  res.json({ video });
+};
+
+export const getConfig: RequestHandler = async (_req, res) => {
+  // Como não usamos mais Mux, sempre retorna false
+  res.json({ muxConfigured: false, supabaseConfigured: !!getAdminClient() });
 };

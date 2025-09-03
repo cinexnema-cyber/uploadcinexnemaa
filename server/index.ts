@@ -8,6 +8,7 @@ import {
   listPublic,
   submit,
   revokeVideo,
+  getConfig,
 } from "./routes/videos";
 import {
   uploadCover as creatorUploadCover,
@@ -47,8 +48,8 @@ export function createServer() {
   app.get("/api/creators/videos", creatorList);
   app.delete("/api/creators/video/:id", creatorDelete);
   app.get("/api/creators/dashboard", creatorDashboard);
-  app.post("/api/creators/upload", creatorRequestUpload);
-  app.post("/api/creators/upload-complete", creatorUploadComplete);
+  app.post("/api/creators/upload", creatorCreateUpload);
+  app.post("/api/creators/upload-complete", creatorCompleteUpload);
 
   // Storage routes
   app.post("/api/storage/signed-url", createSignedUrl);
