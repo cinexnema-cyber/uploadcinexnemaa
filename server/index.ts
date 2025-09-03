@@ -17,6 +17,7 @@ import {
   dashboard as creatorDashboard,
   createVideoUpload as creatorCreateUpload,
   completeVideoUpload as creatorCompleteUpload,
+  uploadCompleteForm as creatorUploadCompleteForm,
 } from "./routes/creators";
 import { createSignedUrl, createSignedUpload, createBuckets, checkBuckets } from "./routes/storage";
 import { setupDatabase } from "./routes/setup";
@@ -52,6 +53,7 @@ export function createServer() {
   app.get("/api/creators/dashboard", creatorDashboard);
   app.post("/api/creators/upload", creatorCreateUpload);
   app.post("/api/creators/upload-complete", creatorCompleteUpload);
+  app.post("/api/creators/upload-complete-form", creatorUploadCompleteForm);
 
   // Storage routes
   app.post("/api/storage/signed-url", createSignedUrl);
