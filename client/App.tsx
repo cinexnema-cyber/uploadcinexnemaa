@@ -54,6 +54,12 @@ function Layout() {
             >
               Admin
             </Link>
+            <Link
+              to="/setup"
+              className="px-3 py-2 rounded-md text-amber-400 hover:text-amber-300 hover:bg-white/10"
+            >
+              ⚙️ Setup
+            </Link>
           </nav>
         </div>
       </header>
