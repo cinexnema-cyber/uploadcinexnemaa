@@ -133,13 +133,21 @@ function Dashboard() {
   const canSend = useMemo(() => !!video && !isUploading, [video, isUploading]);
 
   async function load() {
-    const token = (await supabase?.auth.getSession())?.data.session
-      ?.access_token;
-    const res = await fetch("/api/creators/videos", {
-      headers: { Authorization: `Bearer ${token}` },
-    });
-    const data = await res.json();
-    setItems(data.videos ?? []);
+    try {
+      const token = (await supabase?.auth.getSession())?.data.session
+        ?.access_token;
+      const res = await fetch("/api/creators/videos", {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      if (!res.ok) {
+        console.error(`Erro ao carregar vídeos: HTTP ${res.status}`);
+        return;
+      }
+      const data = await res.json();
+      setItems(data.videos ?? []);
+    } catch (error) {
+      console.error("Erro ao carregar vídeos:", error);
+    }
   }
   useEffect(() => {
     load();
