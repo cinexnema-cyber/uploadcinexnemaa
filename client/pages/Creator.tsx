@@ -52,101 +52,167 @@ export default function Creator() {
 }
 
 function Auth() {
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
+  const [email, setEmail] = useState("centralcomercialec@gmail.com");
+  const [password, setPassword] = useState("I30C77T$IiD");
   const [loading, setLoading] = useState(false);
-  const [isSignUp, setIsSignUp] = useState(false);
 
   async function handleAuth(e: React.FormEvent) {
     e.preventDefault();
     if (!supabase) return;
     setLoading(true);
-
+    
     try {
-      if (isSignUp) {
-        console.log("Tentando criar conta para:", email);
-        const { data, error } = await supabase.auth.signUp({ email, password });
-        console.log("Resultado signUp:", { data, error });
-
-        if (error) {
-          console.error("Erro no signUp:", error);
-          toast.error(error.message);
+      console.log("Iniciando processo de autenticação para:", email);
+      
+      // Primeiro, tenta fazer login
+      console.log("Tentando fazer login...");
+      const { data: signInData, error: signInError } = await supabase.auth.signInWithPassword({
+        email,
+        password,
+      });
+      
+      if (signInError) {
+        console.log("Erro no login:", signInError.message);
+        
+        // Se as credenciais são inválidas, tenta criar a conta
+        if (signInError.message.includes("Invalid login credentials")) {
+          console.log("Credenciais inválidas, tentando criar conta...");
+          
+          const { data: signUpData, error: signUpError } = await supabase.auth.signUp({
+            email,
+            password,
+          });
+          
+          if (signUpError) {
+            console.error("Erro ao criar conta:", signUpError);
+            if (signUpError.message.includes("already registered")) {
+              toast.error("Conta já existe, mas senha pode estar incorreta. Verifique sua senha.");
+            } else {
+              toast.error("Erro ao criar conta: " + signUpError.message);
+            }
+            return;
+          }
+          
+          console.log("Conta criada:", signUpData);
+          
+          // Se a conta foi criada, verifica se precisa de confirmação
+          if (signUpData.user && !signUpData.session) {
+            toast.success("Conta criada! Verifique seu email para confirmar.");
+            return;
+          }
+          
+          // Se já está logado após criar conta
+          if (signUpData.session) {
+            console.log("Login automático após criação da conta");
+            toast.success("Conta criada e login realizado com sucesso!");
+            return;
+          }
+          
+          // Tenta fazer login novamente após criar a conta
+          console.log("Tentando login após criação da conta...");
+          const { data: retrySignIn, error: retryError } = await supabase.auth.signInWithPassword({
+            email,
+            password,
+          });
+          
+          if (retryError) {
+            console.error("Erro no segundo login:", retryError);
+            toast.error("Conta criada, mas erro no login: " + retryError.message);
+          } else {
+            console.log("Login bem-sucedido após criação:", retrySignIn);
+            toast.success("Conta criada e login realizado!");
+          }
+          
         } else {
-          console.log("Conta criada com sucesso:", data);
-          toast.success("Conta criada. Faça login para continuar.");
-          setIsSignUp(false);
+          // Outro tipo de erro
+          toast.error("Erro no login: " + signInError.message);
         }
       } else {
-        console.log("Tentando fazer login para:", email);
-        const { data, error } = await supabase.auth.signInWithPassword({ email, password });
-        console.log("Resultado signIn:", { data, error });
-
-        if (error) {
-          console.error("Erro no signIn:", error);
-
-          // Se usuário não existe, sugerir criar conta
-          if (error.message.includes("Invalid login credentials")) {
-            toast.error("Credenciais inválidas. Tente criar uma conta primeiro.");
-          } else {
-            toast.error(error.message);
-          }
-        } else {
-          console.log("Login realizado com sucesso:", data);
-          toast.success("Login realizado com sucesso!");
-        }
+        console.log("Login realizado com sucesso:", signInData);
+        toast.success("Login realizado com sucesso!");
       }
+      
     } catch (err: any) {
       console.error("Erro geral na autenticação:", err);
       toast.error("Erro inesperado: " + err.message);
     }
-
+    
     setLoading(false);
   }
 
   return (
     <div className="min-h-screen grid place-items-center text-white">
-      <form
-        onSubmit={handleAuth}
-        className="w-full max-w-sm space-y-3 border border-white/10 bg-white/5 p-6 rounded-xl"
-      >
-        <h1 className="text-xl font-semibold">
-          {isSignUp ? "Criar Conta" : "Área do Criador"}
-        </h1>
-        <Input
-          type="email"
-          placeholder="Email"
-          value={email}
-          onChange={(e) => setEmail(e.target.value)}
-          className="bg-transparent border-white/20 text-white"
-          required
-        />
-        <Input
-          type="password"
-          placeholder="Senha"
-          value={password}
-          onChange={(e) => setPassword(e.target.value)}
-          className="bg-transparent border-white/20 text-white"
-          required
-        />
-        <div className="flex gap-2">
+      <div className="w-full max-w-md space-y-6">
+        <form
+          onSubmit={handleAuth}
+          className="w-full space-y-4 border border-white/10 bg-white/5 p-6 rounded-xl"
+        >
+          <div className="text-center mb-4">
+            <h1 className="text-2xl font-semibold">Área do Criador</h1>
+            <p className="text-white/70 text-sm mt-1">Entre com suas credenciais</p>
+          </div>
+          
+          <div>
+            <label className="block text-sm font-medium mb-2">Email</label>
+            <Input
+              type="email"
+              placeholder="seu@email.com"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              className="bg-transparent border-white/20 text-white"
+              required
+            />
+          </div>
+          
+          <div>
+            <label className="block text-sm font-medium mb-2">Senha</label>
+            <Input
+              type="password"
+              placeholder="Sua senha"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              className="bg-transparent border-white/20 text-white"
+              required
+            />
+          </div>
+          
           <Button
             type="submit"
-            className="bg-emerald-500 hover:bg-emerald-500/90 text-black"
+            className="w-full bg-emerald-500 hover:bg-emerald-500/90 text-black font-semibold"
             disabled={loading}
           >
-            {loading ? "..." : isSignUp ? "Criar conta" : "Entrar"}
+            {loading ? "Entrando..." : "Entrar / Criar Conta"}
           </Button>
-          <Button
-            type="button"
-            variant="outline"
-            className="border-white/20 text-white"
-            onClick={() => setIsSignUp(!isSignUp)}
-            disabled={loading}
-          >
-            {isSignUp ? "Fazer login" : "Criar conta"}
-          </Button>
+          
+          <div className="text-center">
+            <p className="text-xs text-white/60">
+              Se a conta não existir, será criada automaticamente
+            </p>
+          </div>
+        </form>
+
+        <div className="bg-blue-500/10 border border-blue-500/20 rounded-lg p-4 text-center">
+          <p className="text-blue-400 text-sm font-medium mb-2">Tendo problemas?</p>
+          <div className="flex gap-2 justify-center">
+            <Button
+              size="sm"
+              variant="outline"
+              className="border-blue-500/20 text-blue-400 text-xs"
+              onClick={() => window.location.href = "/diagnostic-auth"}
+            >
+              🔍 Diagnóstico
+            </Button>
+            <Button
+              size="sm"
+              variant="outline"
+              className="border-blue-500/20 text-blue-400 text-xs"
+              onClick={() => window.location.href = "/test-auth"}
+            >
+              🧪 Teste Completo
+            </Button>
+          </div>
         </div>
-      </form>
+      </div>
     </div>
   );
 }
@@ -337,7 +403,7 @@ function Dashboard() {
 
   return (
     <div className="min-h-screen text-white">
-      <section className="container mx-auto px-4 py-10 md:py-16">
+      <section className="container mx-auto px-4 py-10">
         <div className="flex items-center justify-between mb-8">
           <div>
             <h1 className="text-3xl md:text-4xl font-extrabold">Área do Criador</h1>
@@ -384,7 +450,7 @@ function Dashboard() {
 
         <div className="grid lg:grid-cols-[1.1fr,0.9fr] gap-8">
           <div className="rounded-2xl border border-white/10 bg-white/5 p-6">
-            <h2 className="text-xl font-semibold mb-4">Novo Upload</h2>
+            <h2 className="text-xl font-semibold mb-4">Upload Rápido</h2>
             <div className="grid gap-4">
               <Input
                 placeholder="Título do vídeo *"
