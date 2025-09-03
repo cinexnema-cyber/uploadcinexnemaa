@@ -19,6 +19,7 @@ import {
   completeVideoUpload as creatorCompleteUpload,
 } from "./routes/creators";
 import { createSignedUrl, createSignedUpload } from "./routes/storage";
+import { setupDatabase } from "./routes/setup";
 
 export function createServer() {
   const app = express();
@@ -55,6 +56,9 @@ export function createServer() {
   // Storage routes
   app.post("/api/storage/signed-url", createSignedUrl);
   app.post("/api/storage/signed-upload", createSignedUpload);
+
+  // Setup routes
+  app.post("/api/setup/database", setupDatabase);
 
   return app;
 }
