@@ -27,7 +27,7 @@ export default function Setup() {
         method: "POST",
       });
       const data = await res.json();
-      
+
       if (res.ok) {
         toast.success("Banco configurado com sucesso!");
         await checkConfig();
@@ -63,28 +63,38 @@ export default function Setup() {
           </h1>
 
           <div className="bg-white/5 border border-white/10 rounded-lg p-6 mb-6">
-            <h2 className="text-xl font-semibold mb-4">Status da Configuração</h2>
-            
+            <h2 className="text-xl font-semibold mb-4">
+              Status da Configuração
+            </h2>
+
             <div className="space-y-3">
               <div className="flex items-center justify-between">
                 <span>Supabase Conectado</span>
-                <span className={`px-2 py-1 rounded text-xs ${
-                  config.supabaseConfigured 
-                    ? "bg-emerald-500/20 text-emerald-400" 
-                    : "bg-red-500/20 text-red-400"
-                }`}>
-                  {config.supabaseConfigured ? "✓ Conectado" : "✗ Não configurado"}
+                <span
+                  className={`px-2 py-1 rounded text-xs ${
+                    config.supabaseConfigured
+                      ? "bg-emerald-500/20 text-emerald-400"
+                      : "bg-red-500/20 text-red-400"
+                  }`}
+                >
+                  {config.supabaseConfigured
+                    ? "✓ Conectado"
+                    : "✗ Não configurado"}
                 </span>
               </div>
-              
+
               <div className="flex items-center justify-between">
                 <span>Tabelas do Banco</span>
-                <span className={`px-2 py-1 rounded text-xs ${
-                  config.tablesConfigured 
-                    ? "bg-emerald-500/20 text-emerald-400" 
-                    : "bg-amber-500/20 text-amber-400"
-                }`}>
-                  {config.tablesConfigured ? "✓ Configuradas" : "⚠ Não criadas"}
+                <span
+                  className={`px-2 py-1 rounded text-xs ${
+                    config.tablesConfigured
+                      ? "bg-emerald-500/20 text-emerald-400"
+                      : "bg-amber-500/20 text-amber-400"
+                  }`}
+                >
+                  {config.tablesConfigured
+                    ? "✓ Configuradas"
+                    : "⚠ Não criadas"}
                 </span>
               </div>
             </div>
@@ -96,10 +106,10 @@ export default function Setup() {
                 ⚠ Configuração Necessária
               </h3>
               <p className="text-white/80 mb-4">
-                As tabelas do banco de dados ainda não foram criadas. 
-                Clique no botão abaixo para configurar automaticamente.
+                As tabelas do banco de dados ainda não foram criadas. Clique no
+                botão abaixo para configurar automaticamente.
               </p>
-              
+
               <Button
                 onClick={setupDatabase}
                 disabled={loading}
@@ -116,18 +126,19 @@ export default function Setup() {
                 ✅ Sistema Configurado
               </h3>
               <p className="text-white/80 mb-4">
-                Tudo está funcionando corretamente! Você pode começar a usar a plataforma.
+                Tudo está funcionando corretamente! Você pode começar a usar a
+                plataforma.
               </p>
-              
+
               <div className="flex gap-2">
                 <Button
-                  onClick={() => window.location.href = "/"}
+                  onClick={() => (window.location.href = "/")}
                   className="bg-emerald-500 hover:bg-emerald-500/90 text-black"
                 >
                   Ir para Upload
                 </Button>
                 <Button
-                  onClick={() => window.location.href = "/creator"}
+                  onClick={() => (window.location.href = "/creator")}
                   variant="outline"
                   className="border-white/20 text-white"
                 >
@@ -138,17 +149,25 @@ export default function Setup() {
           )}
 
           <div className="bg-white/5 border border-white/10 rounded-lg p-6">
-            <h3 className="text-lg font-semibold mb-3">Configuração Manual (Alternativa)</h3>
+            <h3 className="text-lg font-semibold mb-3">
+              Configuração Manual (Alternativa)
+            </h3>
             <p className="text-white/70 text-sm mb-3">
-              Se a configuração automática não funcionar, você pode executar o script SQL manualmente:
+              Se a configuração automática não funcionar, você pode executar o
+              script SQL manualmente:
             </p>
             <ol className="text-white/80 text-sm space-y-1 list-decimal list-inside">
               <li>Acesse seu painel do Supabase</li>
               <li>Vá em "SQL Editor"</li>
-              <li>Execute o conteúdo do arquivo <code className="bg-white/10 px-1 rounded">server/setup-supabase.sql</code></li>
+              <li>
+                Execute o conteúdo do arquivo{" "}
+                <code className="bg-white/10 px-1 rounded">
+                  server/setup-supabase.sql
+                </code>
+              </li>
               <li>Clique em "Atualizar" para verificar novamente</li>
             </ol>
-            
+
             <Button
               onClick={checkConfig}
               variant="outline"

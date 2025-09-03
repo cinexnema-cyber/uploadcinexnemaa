@@ -4,17 +4,20 @@ import { getAdminClient } from "../supabase";
 export const listPublic: RequestHandler = async (_req, res) => {
   const sb = getAdminClient();
   if (!sb) return res.status(400).json({ error: "SUPABASE_NOT_CONFIGURED" });
-  
+
   try {
     const { data, error } = await sb
       .from("videos")
       .select("*")
       .eq("aprovado", true)
       .order("created_at", { ascending: false });
-      
+
     if (error) {
       // Se a tabela não existe, retornar lista vazia
-      if (error.message.includes("does not exist") || error.message.includes("schema cache")) {
+      if (
+        error.message.includes("does not exist") ||
+        error.message.includes("schema cache")
+      ) {
         console.warn("Tabela 'videos' não encontrada. Retornando lista vazia.");
         return res.json({ videos: [], warning: "Tabelas não configuradas" });
       }
@@ -30,15 +33,18 @@ export const listPublic: RequestHandler = async (_req, res) => {
 export const listAll: RequestHandler = async (_req, res) => {
   const sb = getAdminClient();
   if (!sb) return res.status(400).json({ error: "SUPABASE_NOT_CONFIGURED" });
-  
+
   try {
     const { data, error } = await sb
       .from("videos")
       .select("*")
       .order("created_at", { ascending: false });
-      
+
     if (error) {
-      if (error.message.includes("does not exist") || error.message.includes("schema cache")) {
+      if (
+        error.message.includes("does not exist") ||
+        error.message.includes("schema cache")
+      ) {
         console.warn("Tabela 'videos' não encontrada. Retornando lista vazia.");
         return res.json({ videos: [], warning: "Tabelas não configuradas" });
       }
@@ -54,7 +60,7 @@ export const listAll: RequestHandler = async (_req, res) => {
 export const submit: RequestHandler = async (req, res) => {
   const sb = getAdminClient();
   if (!sb) return res.status(400).json({ error: "SUPABASE_NOT_CONFIGURED" });
-  
+
   const {
     title,
     bio,
@@ -93,26 +99,29 @@ export const submit: RequestHandler = async (req, res) => {
         bucket: bucket || null,
         video_path: storagePath || null,
         status: "uploaded",
-        aprovado: false
+        aprovado: false,
       })
       .select()
       .single();
 
     if (error) {
-      if (error.message.includes("does not exist") || error.message.includes("schema cache")) {
+      if (
+        error.message.includes("does not exist") ||
+        error.message.includes("schema cache")
+      ) {
         console.warn("Tabela 'videos' não encontrada. Simulando sucesso.");
-        return res.json({ 
-          video: { 
-            id: Date.now().toString(), 
+        return res.json({
+          video: {
+            id: Date.now().toString(),
             titulo: title?.trim() || "Vídeo sem título",
-            created_at: new Date().toISOString()
+            created_at: new Date().toISOString(),
           },
-          warning: "Tabelas não configuradas - dados não salvos"
+          warning: "Tabelas não configuradas - dados não salvos",
         });
       }
-      return res.status(500).json({ 
-        error: "DATABASE_ERROR", 
-        message: error.message 
+      return res.status(500).json({
+        error: "DATABASE_ERROR",
+        message: error.message,
       });
     }
 
@@ -129,9 +138,9 @@ export const submit: RequestHandler = async (req, res) => {
 export const approveVideo: RequestHandler = async (req, res) => {
   const sb = getAdminClient();
   if (!sb) return res.status(400).json({ error: "SUPABASE_NOT_CONFIGURED" });
-  
+
   const { id } = req.params as { id: string };
-  
+
   try {
     const { data: video, error } = await sb
       .from("videos")
@@ -139,15 +148,18 @@ export const approveVideo: RequestHandler = async (req, res) => {
       .eq("id", id)
       .select()
       .single();
-      
+
     if (error) {
-      if (error.message.includes("does not exist") || error.message.includes("schema cache")) {
+      if (
+        error.message.includes("does not exist") ||
+        error.message.includes("schema cache")
+      ) {
         return res.json({ warning: "Tabelas não configuradas" });
       }
       return res.status(500).json({ error: error.message });
     }
     if (!video) return res.status(404).json({ error: "NOT_FOUND" });
-    
+
     res.json({ video });
   } catch (err: any) {
     console.error("Erro ao aprovar vídeo:", err);
@@ -158,9 +170,9 @@ export const approveVideo: RequestHandler = async (req, res) => {
 export const revokeVideo: RequestHandler = async (req, res) => {
   const sb = getAdminClient();
   if (!sb) return res.status(400).json({ error: "SUPABASE_NOT_CONFIGURED" });
-  
+
   const { id } = req.params as { id: string };
-  
+
   try {
     const { data: video, error } = await sb
       .from("videos")
@@ -168,15 +180,18 @@ export const revokeVideo: RequestHandler = async (req, res) => {
       .eq("id", id)
       .select()
       .single();
-      
+
     if (error) {
-      if (error.message.includes("does not exist") || error.message.includes("schema cache")) {
+      if (
+        error.message.includes("does not exist") ||
+        error.message.includes("schema cache")
+      ) {
         return res.json({ warning: "Tabelas não configuradas" });
       }
       return res.status(500).json({ error: error.message });
     }
     if (!video) return res.status(404).json({ error: "NOT_FOUND" });
-    
+
     res.json({ video });
   } catch (err: any) {
     console.error("Erro ao revogar vídeo:", err);
@@ -186,7 +201,7 @@ export const revokeVideo: RequestHandler = async (req, res) => {
 
 export const getConfig: RequestHandler = async (_req, res) => {
   const sb = getAdminClient();
-  
+
   // Verificar se as tabelas existem
   let tablesExist = false;
   if (sb) {
@@ -197,10 +212,10 @@ export const getConfig: RequestHandler = async (_req, res) => {
       tablesExist = false;
     }
   }
-  
-  res.json({ 
-    muxConfigured: false, 
+
+  res.json({
+    muxConfigured: false,
     supabaseConfigured: !!sb,
-    tablesConfigured: tablesExist
+    tablesConfigured: tablesExist,
   });
 };

@@ -17,6 +17,7 @@ Para que o sistema funcione corretamente, você precisa configurar o Supabase. S
 3. Execute o script clicando em "Run"
 
 Isso criará as tabelas:
+
 - `videos` - Armazena metadados dos vídeos
 - `projects` - Projetos de séries/seriados dos criadores
 - `earnings` - Controle de ganhos/receitas
@@ -27,40 +28,44 @@ Isso criará as tabelas:
 2. Crie os seguintes buckets:
 
 ### Bucket "videos"
+
 - Nome: `videos`
 - Público: **NÃO** (apenas criadores podem acessar seus próprios vídeos)
 - Policies:
+
   ```sql
   -- Criadores podem fazer upload nos seus próprios diretórios
   CREATE POLICY "Criadores podem upload videos" ON storage.objects
   FOR INSERT WITH CHECK (bucket_id = 'videos' AND auth.uid()::text = (storage.foldername(name))[1]);
-  
+
   -- Criadores podem ler seus próprios vídeos
   CREATE POLICY "Criadores podem ler seus videos" ON storage.objects
   FOR SELECT USING (bucket_id = 'videos' AND auth.uid()::text = (storage.foldername(name))[1]);
-  
+
   -- Criadores podem deletar seus próprios vídeos
   CREATE POLICY "Criadores podem deletar seus videos" ON storage.objects
   FOR DELETE USING (bucket_id = 'videos' AND auth.uid()::text = (storage.foldername(name))[1]);
-  
+
   -- Vídeos aprovados são públicos para leitura
   CREATE POLICY "Videos aprovados sao publicos" ON storage.objects
   FOR SELECT USING (bucket_id = 'videos');
   ```
 
 ### Bucket "covers"
+
 - Nome: `covers`
 - Público: **SIM** (capas são públicas)
 - Policies:
+
   ```sql
   -- Criadores podem fazer upload de capas
   CREATE POLICY "Criadores podem upload capas" ON storage.objects
   FOR INSERT WITH CHECK (bucket_id = 'covers' AND auth.uid()::text = (storage.foldername(name))[1]);
-  
+
   -- Capas são públicas para leitura
   CREATE POLICY "Capas sao publicas" ON storage.objects
   FOR SELECT USING (bucket_id = 'covers');
-  
+
   -- Criadores podem deletar suas capas
   CREATE POLICY "Criadores podem deletar capas" ON storage.objects
   FOR DELETE USING (bucket_id = 'covers' AND auth.uid()::text = (storage.foldername(name))[1]);

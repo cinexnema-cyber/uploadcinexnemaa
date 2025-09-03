@@ -19,7 +19,12 @@ import {
   completeVideoUpload as creatorCompleteUpload,
   uploadCompleteForm as creatorUploadCompleteForm,
 } from "./routes/creators";
-import { createSignedUrl, createSignedUpload, createBuckets, checkBuckets } from "./routes/storage";
+import {
+  createSignedUrl,
+  createSignedUpload,
+  createBuckets,
+  checkBuckets,
+} from "./routes/storage";
 import { setupDatabase } from "./routes/setup";
 
 export function createServer() {

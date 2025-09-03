@@ -43,7 +43,7 @@ export default function Creator() {
           </p>
           <div className="flex gap-2 justify-center">
             <Button
-              onClick={() => window.location.href = "/supabase-diagnostic"}
+              onClick={() => (window.location.href = "/supabase-diagnostic")}
               className="bg-purple-500 hover:bg-purple-500/90 text-white"
             >
               🔧 Diagnosticar
@@ -66,68 +66,76 @@ function Auth() {
     e.preventDefault();
     if (!supabase) return;
     setLoading(true);
-    
+
     try {
       console.log("🔐 Iniciando processo de autenticação para:", email);
-      
+
       // Primeiro, tenta fazer login
-      const { data: signInData, error: signInError } = await supabase.auth.signInWithPassword({
-        email,
-        password,
-      });
-      
+      const { data: signInData, error: signInError } =
+        await supabase.auth.signInWithPassword({
+          email,
+          password,
+        });
+
       if (signInError) {
         console.log("⚠️ Erro no login:", signInError.message);
-        
+
         // Se as credenciais são inválidas, tenta criar a conta
         if (signInError.message.includes("Invalid login credentials")) {
           console.log("🆕 Tentando criar conta...");
-          
-          const { data: signUpData, error: signUpError } = await supabase.auth.signUp({
-            email,
-            password,
-          });
-          
+
+          const { data: signUpData, error: signUpError } =
+            await supabase.auth.signUp({
+              email,
+              password,
+            });
+
           if (signUpError) {
             console.error("❌ Erro ao criar conta:", signUpError);
             if (signUpError.message.includes("already registered")) {
-              toast.error("Conta já existe, mas senha pode estar incorreta. Verifique sua senha.");
+              toast.error(
+                "Conta já existe, mas senha pode estar incorreta. Verifique sua senha.",
+              );
             } else {
               toast.error("Erro ao criar conta: " + signUpError.message);
             }
             return;
           }
-          
+
           console.log("✅ Conta criada:", signUpData);
-          
+
           // Se a conta foi criada mas não logou automaticamente
           if (signUpData.user && !signUpData.session) {
-            toast.success("Conta criada! Verifique seu email para confirmar (ou desabilite confirmação no Supabase).");
+            toast.success(
+              "Conta criada! Verifique seu email para confirmar (ou desabilite confirmação no Supabase).",
+            );
             return;
           }
-          
+
           // Se logou automaticamente após criar
           if (signUpData.session) {
             console.log("🎉 Login automático após criação da conta");
             toast.success("Conta criada e login realizado automaticamente!");
             return;
           }
-          
+
           // Tenta fazer login novamente após criar a conta
           console.log("🔄 Tentando login após criar conta...");
-          const { data: retryData, error: retryError } = await supabase.auth.signInWithPassword({
-            email,
-            password,
-          });
-          
+          const { data: retryData, error: retryError } =
+            await supabase.auth.signInWithPassword({
+              email,
+              password,
+            });
+
           if (retryError) {
             console.error("❌ Erro no segundo login:", retryError);
-            toast.error("Conta criada, mas erro no login: " + retryError.message);
+            toast.error(
+              "Conta criada, mas erro no login: " + retryError.message,
+            );
           } else {
             console.log("✅ Login bem-sucedido após criação:", retryData);
             toast.success("Conta criada e login realizado!");
           }
-          
         } else {
           // Outro tipo de erro
           toast.error("Erro no login: " + signInError.message);
@@ -136,12 +144,11 @@ function Auth() {
         console.log("✅ Login realizado com sucesso:", signInData);
         toast.success("Login realizado com sucesso!");
       }
-      
     } catch (err: any) {
       console.error("❌ Erro geral na autenticação:", err);
       toast.error("Erro inesperado: " + err.message);
     }
-    
+
     setLoading(false);
   }
 
@@ -154,9 +161,11 @@ function Auth() {
         >
           <div className="text-center mb-4">
             <h1 className="text-2xl font-semibold">Área do Criador</h1>
-            <p className="text-white/70 text-sm mt-1">Entre com suas credenciais</p>
+            <p className="text-white/70 text-sm mt-1">
+              Entre com suas credenciais
+            </p>
           </div>
-          
+
           <div>
             <label className="block text-sm font-medium mb-2">Email</label>
             <Input
@@ -168,7 +177,7 @@ function Auth() {
               required
             />
           </div>
-          
+
           <div>
             <label className="block text-sm font-medium mb-2">Senha</label>
             <Input
@@ -180,7 +189,7 @@ function Auth() {
               required
             />
           </div>
-          
+
           <Button
             type="submit"
             className="w-full bg-emerald-500 hover:bg-emerald-500/90 text-black font-semibold"
@@ -188,7 +197,7 @@ function Auth() {
           >
             {loading ? "Entrando..." : "Entrar / Criar Conta"}
           </Button>
-          
+
           <div className="text-center">
             <p className="text-xs text-white/60">
               Se a conta não existir, será criada automaticamente
@@ -197,13 +206,15 @@ function Auth() {
         </form>
 
         <div className="bg-blue-500/10 border border-blue-500/20 rounded-lg p-4 text-center">
-          <p className="text-blue-400 text-sm font-medium mb-2">Tendo problemas?</p>
+          <p className="text-blue-400 text-sm font-medium mb-2">
+            Tendo problemas?
+          </p>
           <div className="flex gap-2 justify-center flex-wrap">
             <Button
               size="sm"
               variant="outline"
               className="border-blue-500/20 text-blue-400 text-xs"
-              onClick={() => window.location.href = "/diagnostic-auth"}
+              onClick={() => (window.location.href = "/diagnostic-auth")}
             >
               🔍 Debug Auth
             </Button>
@@ -211,7 +222,7 @@ function Auth() {
               size="sm"
               variant="outline"
               className="border-purple-500/20 text-purple-400 text-xs"
-              onClick={() => window.location.href = "/supabase-diagnostic"}
+              onClick={() => (window.location.href = "/supabase-diagnostic")}
             >
               🔧 Debug Storage
             </Button>
@@ -219,7 +230,7 @@ function Auth() {
               size="sm"
               variant="outline"
               className="border-green-500/20 text-green-400 text-xs"
-              onClick={() => window.location.href = "/test-upload"}
+              onClick={() => (window.location.href = "/test-upload")}
             >
               🧪 Teste Upload
             </Button>
@@ -244,11 +255,15 @@ function Dashboard() {
   const [items, setItems] = useState<VideoRow[]>([]);
   const [stats, setStats] = useState<any>({});
 
-  const canSend = useMemo(() => !!video && !!title && !isUploading, [video, title, isUploading]);
+  const canSend = useMemo(
+    () => !!video && !!title && !isUploading,
+    [video, title, isUploading],
+  );
 
   async function load() {
     try {
-      const token = (await supabase?.auth.getSession())?.data.session?.access_token;
+      const token = (await supabase?.auth.getSession())?.data.session
+        ?.access_token;
       const res = await fetch("/api/creators/videos", {
         headers: { Authorization: `Bearer ${token}` },
       });
@@ -265,7 +280,8 @@ function Dashboard() {
 
   async function loadDashboard() {
     try {
-      const token = (await supabase?.auth.getSession())?.data.session?.access_token;
+      const token = (await supabase?.auth.getSession())?.data.session
+        ?.access_token;
       const res = await fetch("/api/creators/dashboard", {
         headers: { Authorization: `Bearer ${token}` },
       });
@@ -284,32 +300,31 @@ function Dashboard() {
 
   async function uploadCoverNow() {
     if (!cover) return;
-    
+
     try {
       setProgress(10);
-      
+
       // Garantir que bucket exists
       await ensureBucketExists("covers", true);
-      
+
       setProgress(30);
-      
+
       // Upload usando nova biblioteca
       const result = await uploadFile(cover, {
         bucket: "covers",
         folder: "creator-covers",
-        maxSize: 10 * 1024 * 1024 // 10MB
+        maxSize: 10 * 1024 * 1024, // 10MB
       });
-      
+
       setProgress(80);
-      
+
       if (!result.success) {
         throw new Error(result.error || "Erro no upload da capa");
       }
-      
+
       setCoverUrl(result.data!.publicUrl);
       setProgress(100);
       toast.success("Capa enviada com sucesso!");
-      
     } catch (error: any) {
       console.error("❌ Erro no upload da capa:", error);
       toast.error("Erro ao enviar capa: " + error.message);
@@ -325,27 +340,28 @@ function Dashboard() {
 
     try {
       console.log("🎬 Iniciando upload de vídeo:", video.name);
-      
+
       // 1. Garantir que buckets existem
       setProgress(10);
       await ensureBucketExists("videos", false);
-      
+
       // 2. Upload do vídeo
       setProgress(20);
       const videoResult = await uploadFile(video, {
         bucket: "videos",
         folder: "creator-videos",
-        maxSize: 500 * 1024 * 1024 // 500MB
+        maxSize: 500 * 1024 * 1024, // 500MB
       });
-      
+
       if (!videoResult.success) {
         throw new Error(videoResult.error || "Erro no upload do vídeo");
       }
-      
+
       setProgress(80);
-      
+
       // 3. Salvar metadados
-      const token = (await supabase?.auth.getSession())?.data.session?.access_token;
+      const token = (await supabase?.auth.getSession())?.data.session
+        ?.access_token;
       const saveRes = await fetch("/api/videos/submit", {
         method: "POST",
         headers: {
@@ -358,11 +374,11 @@ function Dashboard() {
           format,
           genres,
           publicUrl: videoResult.data!.publicUrl,
-          bucket: videoResult.data!.path.split('/')[0],
+          bucket: videoResult.data!.path.split("/")[0],
           path: videoResult.data!.path,
         }),
       });
-      
+
       if (!saveRes.ok) {
         let errorMessage = "Erro ao salvar metadados";
         try {
@@ -373,10 +389,10 @@ function Dashboard() {
         }
         throw new Error(errorMessage);
       }
-      
+
       setProgress(100);
       toast.success("Upload concluído com sucesso!");
-      
+
       // Reset form
       setTitle("");
       setDescription("");
@@ -387,10 +403,9 @@ function Dashboard() {
       setCoverUrl(null);
       setVideo(null);
       setProgress(0);
-      
+
       await load();
       await loadDashboard();
-      
     } catch (e: any) {
       console.error("❌ Erro no upload:", e);
       toast.error(e?.message || String(e));
@@ -413,18 +428,20 @@ function Dashboard() {
       <section className="container mx-auto px-4 py-10">
         <div className="flex items-center justify-between mb-8">
           <div>
-            <h1 className="text-3xl md:text-4xl font-extrabold">Área do Criador</h1>
+            <h1 className="text-3xl md:text-4xl font-extrabold">
+              Área do Criador
+            </h1>
             <p className="text-white/70">Gerencie seus conteúdos e uploads.</p>
           </div>
           <div className="flex gap-2">
             <Button
-              onClick={() => window.location.href = "/upload-complete"}
+              onClick={() => (window.location.href = "/upload-complete")}
               className="bg-emerald-500 hover:bg-emerald-500/90 text-black"
             >
               📋 Upload Completo
             </Button>
             <Button
-              onClick={() => window.location.href = "/test-upload"}
+              onClick={() => (window.location.href = "/test-upload")}
               variant="outline"
               className="border-green-500 text-green-400"
             >
@@ -443,20 +460,31 @@ function Dashboard() {
         {/* Estatísticas */}
         <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-8">
           <div className="bg-white/5 border border-white/10 rounded-lg p-4">
-            <div className="text-2xl font-bold text-emerald-400">{stats.totalVideos || 0}</div>
+            <div className="text-2xl font-bold text-emerald-400">
+              {stats.totalVideos || 0}
+            </div>
             <div className="text-sm text-white/70">Total de Vídeos</div>
           </div>
           <div className="bg-white/5 border border-white/10 rounded-lg p-4">
-            <div className="text-2xl font-bold text-blue-400">{stats.videosAprovados || 0}</div>
+            <div className="text-2xl font-bold text-blue-400">
+              {stats.videosAprovados || 0}
+            </div>
             <div className="text-sm text-white/70">Aprovados</div>
           </div>
           <div className="bg-white/5 border border-white/10 rounded-lg p-4">
-            <div className="text-2xl font-bold text-amber-400">R$ {stats.custoMensalTotal || 0}</div>
+            <div className="text-2xl font-bold text-amber-400">
+              R$ {stats.custoMensalTotal || 0}
+            </div>
             <div className="text-sm text-white/70">Custo Mensal</div>
           </div>
           <div className="bg-white/5 border border-white/10 rounded-lg p-4">
             <div className="text-2xl font-bold text-purple-400">
-              {((stats.videosAprovados || 0) / Math.max(stats.totalVideos || 1, 1) * 100).toFixed(0)}%
+              {(
+                ((stats.videosAprovados || 0) /
+                  Math.max(stats.totalVideos || 1, 1)) *
+                100
+              ).toFixed(0)}
+              %
             </div>
             <div className="text-sm text-white/70">Taxa de Aprovação</div>
           </div>
@@ -479,22 +507,32 @@ function Dashboard() {
                 onChange={(e) => setDescription(e.target.value)}
                 className="bg-transparent border border-white/20 text-white rounded-md p-3 min-h-[80px] resize-none"
               />
-              
+
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
-                  <label className="text-sm text-white/70 mb-2 block">Formato</label>
+                  <label className="text-sm text-white/70 mb-2 block">
+                    Formato
+                  </label>
                   <select
                     value={format}
                     onChange={(e) => setFormat(e.target.value as any)}
                     className="w-full bg-transparent border border-white/20 text-white rounded-md p-3"
                   >
-                    <option className="text-black" value="Filme">Filme</option>
-                    <option className="text-black" value="Série">Série</option>
-                    <option className="text-black" value="Seriado">Seriado</option>
+                    <option className="text-black" value="Filme">
+                      Filme
+                    </option>
+                    <option className="text-black" value="Série">
+                      Série
+                    </option>
+                    <option className="text-black" value="Seriado">
+                      Seriado
+                    </option>
                   </select>
                 </div>
                 <div>
-                  <label className="text-sm text-white/70 mb-2 block">Duração (minutos)</label>
+                  <label className="text-sm text-white/70 mb-2 block">
+                    Duração (minutos)
+                  </label>
                   <Input
                     type="number"
                     placeholder="Ex: 90"
@@ -511,9 +549,19 @@ function Dashboard() {
               </div>
 
               <div>
-                <label className="text-sm text-white/70 mb-2 block">Gêneros</label>
+                <label className="text-sm text-white/70 mb-2 block">
+                  Gêneros
+                </label>
                 <div className="flex flex-wrap gap-2">
-                  {["Ação", "Terror", "Drama", "Comédia", "Ficção", "Documentário", "Romance"].map((g) => (
+                  {[
+                    "Ação",
+                    "Terror",
+                    "Drama",
+                    "Comédia",
+                    "Ficção",
+                    "Documentário",
+                    "Romance",
+                  ].map((g) => (
                     <label
                       key={g}
                       className="inline-flex items-center gap-2 text-sm bg-white/5 border border-white/10 rounded px-3 py-1"
@@ -551,7 +599,9 @@ function Dashboard() {
                   Enviar capa
                 </Button>
                 {coverUrl && (
-                  <span className="text-xs text-emerald-300">✓ Capa pronta</span>
+                  <span className="text-xs text-emerald-300">
+                    ✓ Capa pronta
+                  </span>
                 )}
               </div>
 
@@ -644,7 +694,8 @@ function Dashboard() {
 
   async function onDelete(id: string) {
     try {
-      const token = (await supabase?.auth.getSession())?.data.session?.access_token;
+      const token = (await supabase?.auth.getSession())?.data.session
+        ?.access_token;
       const res = await fetch(`/api/creators/video/${id}`, {
         method: "DELETE",
         headers: { Authorization: `Bearer ${token}` },

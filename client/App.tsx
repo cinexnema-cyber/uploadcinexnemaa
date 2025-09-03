@@ -127,7 +127,10 @@ function App() {
                 <Route path="/setup" element={<Setup />} />
                 <Route path="/test-auth" element={<TestAuth />} />
                 <Route path="/diagnostic-auth" element={<DiagnosticAuth />} />
-                <Route path="/supabase-diagnostic" element={<SupabaseDiagnostic />} />
+                <Route
+                  path="/supabase-diagnostic"
+                  element={<SupabaseDiagnostic />}
+                />
                 <Route path="/test-upload" element={<TestUpload />} />
                 <Route path="/guide" element={<GuideStatus />} />
                 <Route path="/upload-complete" element={<UploadComplete />} />

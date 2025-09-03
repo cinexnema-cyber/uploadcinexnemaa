@@ -48,21 +48,22 @@ export default function Content() {
     let filtered = videos;
 
     if (searchTerm) {
-      filtered = filtered.filter(v => 
-        v.titulo.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        v.descricao?.toLowerCase().includes(searchTerm.toLowerCase())
+      filtered = filtered.filter(
+        (v) =>
+          v.titulo.toLowerCase().includes(searchTerm.toLowerCase()) ||
+          v.descricao?.toLowerCase().includes(searchTerm.toLowerCase()),
       );
     }
 
     if (filterFormat !== "all") {
-      filtered = filtered.filter(v => v.formato === filterFormat);
+      filtered = filtered.filter((v) => v.formato === filterFormat);
     }
 
     if (filterStatus !== "all") {
       if (filterStatus === "aprovado") {
-        filtered = filtered.filter(v => v.aprovado);
+        filtered = filtered.filter((v) => v.aprovado);
       } else if (filterStatus === "pendente") {
-        filtered = filtered.filter(v => !v.aprovado);
+        filtered = filtered.filter((v) => !v.aprovado);
       }
     }
 
@@ -72,7 +73,8 @@ export default function Content() {
   async function loadVideos() {
     try {
       setLoading(true);
-      const token = (await supabase?.auth.getSession())?.data.session?.access_token;
+      const token = (await supabase?.auth.getSession())?.data.session
+        ?.access_token;
       const res = await fetch("/api/creators/videos", {
         headers: { Authorization: `Bearer ${token}` },
       });
@@ -92,9 +94,10 @@ export default function Content() {
 
   async function deleteVideo(id: string) {
     if (!confirm("Tem certeza que deseja excluir este vídeo?")) return;
-    
+
     try {
-      const token = (await supabase?.auth.getSession())?.data.session?.access_token;
+      const token = (await supabase?.auth.getSession())?.data.session
+        ?.access_token;
       const res = await fetch(`/api/creators/video/${id}`, {
         method: "DELETE",
         headers: { Authorization: `Bearer ${token}` },
@@ -132,7 +135,7 @@ export default function Content() {
             Faça login para acessar seus conteúdos.
           </p>
           <Button
-            onClick={() => window.location.href = "/creator"}
+            onClick={() => (window.location.href = "/creator")}
             className="bg-emerald-500 hover:bg-emerald-500/90 text-black"
           >
             Fazer Login
@@ -147,14 +150,18 @@ export default function Content() {
       <section className="container mx-auto px-4 py-10">
         <div className="flex items-center justify-between mb-8">
           <div>
-            <h1 className="text-3xl md:text-4xl font-extrabold">Meus Conteúdos</h1>
-            <p className="text-white/70">Gerencie todos os seus vídeos publicados.</p>
+            <h1 className="text-3xl md:text-4xl font-extrabold">
+              Meus Conteúdos
+            </h1>
+            <p className="text-white/70">
+              Gerencie todos os seus vídeos publicados.
+            </p>
           </div>
           <div className="flex gap-2">
             <Button
               variant="outline"
               className="border-white/20 text-white"
-              onClick={() => window.location.href = "/creator"}
+              onClick={() => (window.location.href = "/creator")}
             >
               Nova Upload
             </Button>
@@ -181,16 +188,26 @@ export default function Content() {
               />
             </div>
             <div>
-              <label className="text-sm text-white/70 mb-1 block">Formato</label>
+              <label className="text-sm text-white/70 mb-1 block">
+                Formato
+              </label>
               <select
                 value={filterFormat}
                 onChange={(e) => setFilterFormat(e.target.value)}
                 className="w-full bg-transparent border border-white/20 text-white rounded-md p-2"
               >
-                <option className="text-black" value="all">Todos</option>
-                <option className="text-black" value="Filme">Filme</option>
-                <option className="text-black" value="Série">Série</option>
-                <option className="text-black" value="Seriado">Seriado</option>
+                <option className="text-black" value="all">
+                  Todos
+                </option>
+                <option className="text-black" value="Filme">
+                  Filme
+                </option>
+                <option className="text-black" value="Série">
+                  Série
+                </option>
+                <option className="text-black" value="Seriado">
+                  Seriado
+                </option>
               </select>
             </div>
             <div>
@@ -200,9 +217,15 @@ export default function Content() {
                 onChange={(e) => setFilterStatus(e.target.value)}
                 className="w-full bg-transparent border border-white/20 text-white rounded-md p-2"
               >
-                <option className="text-black" value="all">Todos</option>
-                <option className="text-black" value="aprovado">Aprovados</option>
-                <option className="text-black" value="pendente">Pendentes</option>
+                <option className="text-black" value="all">
+                  Todos
+                </option>
+                <option className="text-black" value="aprovado">
+                  Aprovados
+                </option>
+                <option className="text-black" value="pendente">
+                  Pendentes
+                </option>
               </select>
             </div>
             <div className="flex items-end">
@@ -220,18 +243,20 @@ export default function Content() {
         {/* Estatísticas */}
         <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
           <div className="bg-white/5 border border-white/10 rounded-lg p-4">
-            <div className="text-2xl font-bold text-emerald-400">{videos.length}</div>
+            <div className="text-2xl font-bold text-emerald-400">
+              {videos.length}
+            </div>
             <div className="text-sm text-white/70">Total de Vídeos</div>
           </div>
           <div className="bg-white/5 border border-white/10 rounded-lg p-4">
             <div className="text-2xl font-bold text-blue-400">
-              {videos.filter(v => v.aprovado).length}
+              {videos.filter((v) => v.aprovado).length}
             </div>
             <div className="text-sm text-white/70">Aprovados</div>
           </div>
           <div className="bg-white/5 border border-white/10 rounded-lg p-4">
             <div className="text-2xl font-bold text-amber-400">
-              {videos.filter(v => !v.aprovado).length}
+              {videos.filter((v) => !v.aprovado).length}
             </div>
             <div className="text-sm text-white/70">Pendentes</div>
           </div>
@@ -249,10 +274,9 @@ export default function Content() {
             <div className="text-center text-white/60 py-8">Carregando...</div>
           ) : filteredVideos.length === 0 ? (
             <div className="text-center text-white/60 py-8">
-              {videos.length === 0 
+              {videos.length === 0
                 ? "Nenhum vídeo encontrado. Comece fazendo seu primeiro upload!"
-                : "Nenhum vídeo corresponde aos filtros aplicados."
-              }
+                : "Nenhum vídeo corresponde aos filtros aplicados."}
             </div>
           ) : (
             filteredVideos.map((video) => (
@@ -303,13 +327,17 @@ export default function Content() {
                     </div>
 
                     <div className="flex items-center gap-4 mt-3 text-sm text-white/60">
-                      <span>{new Date(video.created_at).toLocaleDateString()}</span>
+                      <span>
+                        {new Date(video.created_at).toLocaleDateString()}
+                      </span>
                       {video.formato && <span>{video.formato}</span>}
                       {video.duracao_minutos && (
                         <span>{video.duracao_minutos} min</span>
                       )}
                       {video.custo_mensal > 0 && (
-                        <span className="text-amber-400">R$ {video.custo_mensal}/mês</span>
+                        <span className="text-amber-400">
+                          R$ {video.custo_mensal}/mês
+                        </span>
                       )}
                     </div>
 
@@ -332,7 +360,9 @@ export default function Content() {
                           size="sm"
                           variant="outline"
                           className="border-white/20 text-white"
-                          onClick={() => window.open(video.video_url!, "_blank")}
+                          onClick={() =>
+                            window.open(video.video_url!, "_blank")
+                          }
                         >
                           Ver Vídeo
                         </Button>

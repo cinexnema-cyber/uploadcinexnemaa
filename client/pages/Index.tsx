@@ -128,10 +128,10 @@ export default function Index() {
     try {
       // Upload direto ao Supabase Storage
       const { uploadVideoViaSignedUrl } = await import("@/lib/video-upload");
-      
+
       // Simular progresso enquanto faz upload
       const intervalId = setInterval(() => {
-        setUploadedBytes(prev => {
+        setUploadedBytes((prev) => {
           const newBytes = Math.min(prev + file.size * 0.1, file.size * 0.9);
           setProgress(Math.round((newBytes / file.size) * 90));
           return newBytes;
@@ -139,7 +139,7 @@ export default function Index() {
       }, 500);
 
       const uploaded = await uploadVideoViaSignedUrl(file);
-      
+
       clearInterval(intervalId);
       setUploadedBytes(file.size);
       setProgress(95);
@@ -159,7 +159,7 @@ export default function Index() {
           path: uploaded.path,
         }),
       });
-      
+
       if (!save.ok) {
         let errorMessage = `HTTP ${save.status}`;
         try {
@@ -170,7 +170,7 @@ export default function Index() {
         }
         throw new Error(errorMessage);
       }
-      
+
       const data = await save.json();
       setProgress(100);
 
@@ -208,7 +208,7 @@ export default function Index() {
               Cinexnema Upload videos
             </h1>
             <p className="mt-3 text-white/70 max-w-2xl">
-              Envie seus vídeos para a plataforma. Após o upload, nossa equipe 
+              Envie seus vídeos para a plataforma. Após o upload, nossa equipe
               avalia e aprova o conteúdo para publicação.
             </p>
             <div className="mt-4">
@@ -221,7 +221,7 @@ export default function Index() {
               <Button
                 variant="outline"
                 className="border-white/20 text-white"
-                onClick={() => window.location.href = "/creator"}
+                onClick={() => (window.location.href = "/creator")}
               >
                 Área do Criador
               </Button>
@@ -393,7 +393,7 @@ export default function Index() {
                     {isUploading ? `Enviando ${progress}%` : "Enviar vídeo"}
                   </Button>
                 </div>
-                
+
                 {file && (
                   <div className="w-full mt-3 grid gap-2">
                     <div className="text-xs text-white/60">
@@ -469,7 +469,9 @@ export default function Index() {
                         {v.titulo}
                       </div>
                       <div className="text-xs text-white/60 flex items-center justify-between">
-                        <span>{new Date(v.created_at).toLocaleDateString()}</span>
+                        <span>
+                          {new Date(v.created_at).toLocaleDateString()}
+                        </span>
                         {v.formato && (
                           <span className="bg-white/10 px-2 py-1 rounded text-xs">
                             {v.formato}

@@ -7,12 +7,14 @@ export const setupDatabase: RequestHandler = async (_req, res) => {
 
   try {
     // Criar extensões necessárias
-    await sb.rpc('exec_sql', { 
-      sql: 'CREATE EXTENSION IF NOT EXISTS "uuid-ossp";' 
-    }).throwOnError();
+    await sb
+      .rpc("exec_sql", {
+        sql: 'CREATE EXTENSION IF NOT EXISTS "uuid-ossp";',
+      })
+      .throwOnError();
 
     // Criar tabela de vídeos
-    const { error: videosError } = await sb.rpc('exec_sql', {
+    const { error: videosError } = await sb.rpc("exec_sql", {
       sql: `
         CREATE TABLE IF NOT EXISTS videos (
           id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -34,16 +36,21 @@ export const setupDatabase: RequestHandler = async (_req, res) => {
           created_at timestamp with time zone DEFAULT now(),
           updated_at timestamp with time zone DEFAULT now()
         );
-      `
+      `,
     });
 
     if (videosError) {
-      console.error('Erro ao criar tabela videos:', videosError);
-      return res.status(500).json({ error: 'Erro ao criar tabela videos', details: videosError.message });
+      console.error("Erro ao criar tabela videos:", videosError);
+      return res
+        .status(500)
+        .json({
+          error: "Erro ao criar tabela videos",
+          details: videosError.message,
+        });
     }
 
     // Criar tabela de projetos
-    const { error: projectsError } = await sb.rpc('exec_sql', {
+    const { error: projectsError } = await sb.rpc("exec_sql", {
       sql: `
         CREATE TABLE IF NOT EXISTS projects (
           id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -51,16 +58,21 @@ export const setupDatabase: RequestHandler = async (_req, res) => {
           nome text NOT NULL,
           created_at timestamp with time zone DEFAULT now()
         );
-      `
+      `,
     });
 
     if (projectsError) {
-      console.error('Erro ao criar tabela projects:', projectsError);
-      return res.status(500).json({ error: 'Erro ao criar tabela projects', details: projectsError.message });
+      console.error("Erro ao criar tabela projects:", projectsError);
+      return res
+        .status(500)
+        .json({
+          error: "Erro ao criar tabela projects",
+          details: projectsError.message,
+        });
     }
 
     // Criar tabela de earnings
-    const { error: earningsError } = await sb.rpc('exec_sql', {
+    const { error: earningsError } = await sb.rpc("exec_sql", {
       sql: `
         CREATE TABLE IF NOT EXISTS earnings (
           id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -72,29 +84,34 @@ export const setupDatabase: RequestHandler = async (_req, res) => {
           mes_ref date NOT NULL,
           created_at timestamp with time zone DEFAULT now()
         );
-      `
+      `,
     });
 
     if (earningsError) {
-      console.error('Erro ao criar tabela earnings:', earningsError);
-      return res.status(500).json({ error: 'Erro ao criar tabela earnings', details: earningsError.message });
+      console.error("Erro ao criar tabela earnings:", earningsError);
+      return res
+        .status(500)
+        .json({
+          error: "Erro ao criar tabela earnings",
+          details: earningsError.message,
+        });
     }
 
     // Habilitar RLS
-    const { error: rlsError } = await sb.rpc('exec_sql', {
+    const { error: rlsError } = await sb.rpc("exec_sql", {
       sql: `
         ALTER TABLE videos ENABLE ROW LEVEL SECURITY;
         ALTER TABLE projects ENABLE ROW LEVEL SECURITY;
         ALTER TABLE earnings ENABLE ROW LEVEL SECURITY;
-      `
+      `,
     });
 
     if (rlsError) {
-      console.error('Erro ao habilitar RLS:', rlsError);
+      console.error("Erro ao habilitar RLS:", rlsError);
     }
 
     // Criar políticas básicas
-    const { error: policiesError } = await sb.rpc('exec_sql', {
+    const { error: policiesError } = await sb.rpc("exec_sql", {
       sql: `
         -- Políticas para videos
         DROP POLICY IF EXISTS "Criadores podem ver seus próprios vídeos" ON videos;
@@ -126,23 +143,23 @@ export const setupDatabase: RequestHandler = async (_req, res) => {
         DROP POLICY IF EXISTS "Criadores podem ver seus ganhos" ON earnings;
         CREATE POLICY "Criadores podem ver seus ganhos" ON earnings
           FOR SELECT USING (auth.uid() = creator_id);
-      `
+      `,
     });
 
     if (policiesError) {
-      console.error('Erro ao criar políticas:', policiesError);
+      console.error("Erro ao criar políticas:", policiesError);
     }
 
-    res.json({ 
-      success: true, 
-      message: 'Banco de dados configurado com sucesso!',
-      tables_created: ['videos', 'projects', 'earnings']
+    res.json({
+      success: true,
+      message: "Banco de dados configurado com sucesso!",
+      tables_created: ["videos", "projects", "earnings"],
     });
   } catch (error: any) {
-    console.error('Erro ao configurar banco:', error);
-    res.status(500).json({ 
-      error: 'Erro ao configurar banco de dados', 
-      details: error.message 
+    console.error("Erro ao configurar banco:", error);
+    res.status(500).json({
+      error: "Erro ao configurar banco de dados",
+      details: error.message,
     });
   }
 };
