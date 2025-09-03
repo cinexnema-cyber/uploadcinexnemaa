@@ -4,7 +4,18 @@ import { Input } from "@/components/ui/input";
 import { Progress } from "@/components/ui/progress";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
-import type { VideoRecord } from "@shared/api";
+
+interface VideoRecord {
+  id: string;
+  titulo: string;
+  descricao: string | null;
+  formato: string | null;
+  generos: string[] | null;
+  video_url: string | null;
+  capa_url: string | null;
+  aprovado: boolean;
+  created_at: string;
+}
 
 function formatETA(startAt: number | null, uploaded: number, total: number) {
   if (!startAt || uploaded <= 0 || total <= 0 || uploaded >= total) return "";
@@ -115,13 +126,25 @@ export default function Index() {
     setUploadStartAt(Date.now());
 
     try {
-      // 1) Upload direto ao Supabase Storage
+      // Upload direto ao Supabase Storage
       const { uploadVideoViaSignedUrl } = await import("@/lib/video-upload");
-      const uploaded = await uploadVideoViaSignedUrl(file);
-      setUploadedBytes(file.size);
-      setProgress(100);
+      
+      // Simular progresso enquanto faz upload
+      const intervalId = setInterval(() => {
+        setUploadedBytes(prev => {
+          const newBytes = Math.min(prev + file.size * 0.1, file.size * 0.9);
+          setProgress(Math.round((newBytes / file.size) * 90));
+          return newBytes;
+        });
+      }, 500);
 
-      // 2) Registrar metadados no backend
+      const uploaded = await uploadVideoViaSignedUrl(file);
+      
+      clearInterval(intervalId);
+      setUploadedBytes(file.size);
+      setProgress(95);
+
+      // Registrar metadados no backend
       const save = await fetch("/api/videos/submit", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -136,7 +159,7 @@ export default function Index() {
           path: uploaded.path,
         }),
       });
-
+      
       if (!save.ok) {
         let errorMessage = `HTTP ${save.status}`;
         try {
@@ -147,10 +170,11 @@ export default function Index() {
         }
         throw new Error(errorMessage);
       }
-
+      
       const data = await save.json();
+      setProgress(100);
 
-      toast.success("Upload concluído!");
+      toast.success("Upload concluído! Aguardando aprovação.");
       setFile(null);
       setTitle("");
       setBio("");
@@ -158,9 +182,12 @@ export default function Index() {
       setGenres([]);
       setProject("");
       if (inputRef.current) inputRef.current.value = "";
+      setThumb(null);
+      if (objectUrl) URL.revokeObjectURL(objectUrl);
+      setObjectUrl(null);
 
-      // Atualiza lista
-      setTimeout(loadPublic, 1000);
+      // Atualiza lista após um tempo
+      setTimeout(loadPublic, 2000);
     } catch (e: any) {
       toast.error(e?.message || String(e));
     } finally {
@@ -181,15 +208,22 @@ export default function Index() {
               Cinexnema Upload videos
             </h1>
             <p className="mt-3 text-white/70 max-w-2xl">
-              Envie seus vídeos. Após o processamento, o admin avalia e libera o
-              conteúdo para a plataforma.
+              Envie seus vídeos para a plataforma. Após o upload, nossa equipe 
+              avalia e aprova o conteúdo para publicação.
             </p>
             <div className="mt-4">
               <Button
                 onClick={() => inputRef.current?.click()}
-                className="bg-emerald-500 hover:bg-emerald-500/90 text-black font-semibold"
+                className="bg-emerald-500 hover:bg-emerald-500/90 text-black font-semibold mr-4"
               >
                 Novo upload
+              </Button>
+              <Button
+                variant="outline"
+                className="border-white/20 text-white"
+                onClick={() => window.location.href = "/creator"}
+              >
+                Área do Criador
               </Button>
             </div>
           </div>
@@ -289,7 +323,7 @@ export default function Index() {
                     <select
                       value={format}
                       onChange={(e) => setFormat(e.target.value as any)}
-                      className="bg-transparent border border-white/20 text-white rounded-md p-2"
+                      className="w-full bg-transparent border border-white/20 text-white rounded-md p-2"
                     >
                       <option className="text-black" value="Filme">
                         Filme
@@ -354,11 +388,12 @@ export default function Index() {
                   <Button
                     disabled={!canUpload}
                     onClick={handleUpload}
-                    className="bg-emerald-500 hover:bg-emerald-500/90 text-black font-semibold"
+                    className="w-full bg-emerald-500 hover:bg-emerald-500/90 text-black font-semibold"
                   >
                     {isUploading ? `Enviando ${progress}%` : "Enviar vídeo"}
                   </Button>
                 </div>
+                
                 {file && (
                   <div className="w-full mt-3 grid gap-2">
                     <div className="text-xs text-white/60">
@@ -397,28 +432,32 @@ export default function Index() {
           </div>
 
           <div className="rounded-2xl border border-white/10 bg-white/5 backdrop-blur p-6">
-            <h2 className="text-xl font-semibold mb-4">Publicados</h2>
+            <h2 className="text-xl font-semibold mb-4">Vídeos Publicados</h2>
             {videos.length === 0 ? (
               <div className="text-white/60 text-sm">
                 Nenhum vídeo publicado ainda.
               </div>
             ) : (
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div className="grid gap-3 max-h-[500px] overflow-y-auto">
                 {videos.map((v) => (
-                  <a
+                  <div
                     key={v.id}
-                    href={v.publicUrl || undefined}
-                    target="_blank"
-                    rel="noreferrer"
                     className="group rounded-xl overflow-hidden border border-white/10 bg-black/40 hover:scale-[1.01] transition"
                   >
-                    {v.publicUrl ? (
+                    {v.video_url ? (
                       <video
-                        src={v.publicUrl}
+                        src={v.video_url}
                         className="w-full aspect-video object-cover"
                         muted
                         playsInline
                         preload="metadata"
+                        controls
+                      />
+                    ) : v.capa_url ? (
+                      <img
+                        src={v.capa_url}
+                        className="w-full aspect-video object-cover"
+                        alt="Capa"
                       />
                     ) : (
                       <div className="w-full aspect-video grid place-items-center text-white/40 text-sm">
@@ -427,47 +466,29 @@ export default function Index() {
                     )}
                     <div className="p-3 border-t border-white/10">
                       <div className="text-sm font-medium line-clamp-1">
-                        {v.title}
+                        {v.titulo}
                       </div>
-                      <div className="text-xs text-white/60">
-                        {new Date(v.createdAt).toLocaleString()}
+                      <div className="text-xs text-white/60 flex items-center justify-between">
+                        <span>{new Date(v.created_at).toLocaleDateString()}</span>
+                        {v.formato && (
+                          <span className="bg-white/10 px-2 py-1 rounded text-xs">
+                            {v.formato}
+                          </span>
+                        )}
                       </div>
+                      {v.generos && v.generos.length > 0 && (
+                        <div className="text-xs text-white/50 mt-1">
+                          {v.generos.join(", ")}
+                        </div>
+                      )}
                     </div>
-                  </a>
+                  </div>
                 ))}
               </div>
             )}
           </div>
         </div>
       </section>
-    </div>
-  );
-}
-
-function MuxNotice() {
-  const [configured, setConfigured] = useState<boolean | null>(null);
-  useEffect(() => {
-    (async () => {
-      try {
-        const res = await fetch("/api/videos/config");
-        if (!res.ok) {
-          setConfigured(false);
-          return;
-        }
-        const data = await res.json();
-        setConfigured(!!data.muxConfigured);
-      } catch {
-        setConfigured(false);
-      }
-    })();
-  }, []);
-
-  if (configured === null) return null;
-  if (configured) return null;
-  return (
-    <div className="mt-6 rounded-lg border border-amber-400/40 bg-amber-400/10 text-amber-200 p-4 text-sm">
-      Para habilitar uploads reais, configure as variáveis MUX_TOKEN_ID e
-      MUX_TOKEN_SECRET no servidor.
     </div>
   );
 }
