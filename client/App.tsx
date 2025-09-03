@@ -18,6 +18,7 @@ import UploadComplete from "./pages/UploadComplete";
 import TestAuth from "./pages/TestAuth";
 import DiagnosticAuth from "./pages/DiagnosticAuth";
 import SupabaseDiagnostic from "./pages/SupabaseDiagnostic";
+import TestUpload from "./pages/TestUpload";
 import ErrorBoundary from "./components/ErrorBoundary";
 
 const queryClient = new QueryClient();
@@ -114,6 +115,7 @@ function App() {
                 <Route path="/test-auth" element={<TestAuth />} />
                 <Route path="/diagnostic-auth" element={<DiagnosticAuth />} />
                 <Route path="/supabase-diagnostic" element={<SupabaseDiagnostic />} />
+                <Route path="/test-upload" element={<TestUpload />} />
                 <Route path="/upload-complete" element={<UploadComplete />} />
                 <Route path="/criadores/upload" element={<UploadFilme />} />
                 {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
