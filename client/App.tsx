@@ -14,6 +14,7 @@ import Admin from "./pages/Admin";
 import NotFound from "./pages/NotFound";
 import UploadFilme from "./pages/criadores/UploadFilme";
 import Setup from "./pages/Setup";
+import UploadComplete from "./pages/UploadComplete";
 import ErrorBoundary from "./components/ErrorBoundary";
 
 const queryClient = new QueryClient();
@@ -89,6 +90,7 @@ function App() {
                 <Route path="/content" element={<Content />} />
                 <Route path="/admin" element={<Admin />} />
                 <Route path="/setup" element={<Setup />} />
+                <Route path="/upload-complete" element={<UploadComplete />} />
                 <Route path="/criadores/upload" element={<UploadFilme />} />
                 {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
                 <Route path="*" element={<NotFound />} />
