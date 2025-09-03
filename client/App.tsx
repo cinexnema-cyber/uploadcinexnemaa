@@ -17,6 +17,7 @@ import Setup from "./pages/Setup";
 import UploadComplete from "./pages/UploadComplete";
 import TestAuth from "./pages/TestAuth";
 import DiagnosticAuth from "./pages/DiagnosticAuth";
+import SupabaseDiagnostic from "./pages/SupabaseDiagnostic";
 import ErrorBoundary from "./components/ErrorBoundary";
 
 const queryClient = new QueryClient();
@@ -75,6 +76,12 @@ function Layout() {
             >
               🔍 Debug
             </Link>
+            <Link
+              to="/supabase-diagnostic"
+              className="px-3 py-2 rounded-md text-purple-400 hover:text-purple-300 hover:bg-white/10"
+            >
+              🔧 Storage
+            </Link>
           </nav>
         </div>
       </header>
@@ -106,6 +113,7 @@ function App() {
                 <Route path="/setup" element={<Setup />} />
                 <Route path="/test-auth" element={<TestAuth />} />
                 <Route path="/diagnostic-auth" element={<DiagnosticAuth />} />
+                <Route path="/supabase-diagnostic" element={<SupabaseDiagnostic />} />
                 <Route path="/upload-complete" element={<UploadComplete />} />
                 <Route path="/criadores/upload" element={<UploadFilme />} />
                 {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
