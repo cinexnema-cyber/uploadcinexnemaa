@@ -18,7 +18,7 @@ import {
   createVideoUpload as creatorCreateUpload,
   completeVideoUpload as creatorCompleteUpload,
 } from "./routes/creators";
-import { createSignedUrl, createSignedUpload } from "./routes/storage";
+import { createSignedUrl, createSignedUpload, createBuckets, checkBuckets } from "./routes/storage";
 import { setupDatabase } from "./routes/setup";
 
 export function createServer() {
@@ -56,6 +56,8 @@ export function createServer() {
   // Storage routes
   app.post("/api/storage/signed-url", createSignedUrl);
   app.post("/api/storage/signed-upload", createSignedUpload);
+  app.post("/api/storage/create-buckets", createBuckets);
+  app.get("/api/storage/check-buckets", checkBuckets);
 
   // Setup routes
   app.post("/api/setup/database", setupDatabase);
