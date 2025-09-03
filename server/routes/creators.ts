@@ -2,20 +2,11 @@ import type { RequestHandler } from "express";
 import multer from "multer";
 import path from "node:path";
 import { getAdminClient, getUserFromRequest } from "../supabase";
-import Mux from "@mux/mux-node";
 
 const upload = multer({
   storage: multer.memoryStorage(),
-  limits: { fileSize: 50 * 1024 * 1024 },
+  limits: { fileSize: 500 * 1024 * 1024 }, // 500MB para vídeos
 });
-
-function getMux(): { video: Mux.Video } | null {
-  const tokenId = process.env.MUX_TOKEN_ID;
-  const tokenSecret = process.env.MUX_TOKEN_SECRET;
-  if (!tokenId || !tokenSecret) return null;
-  const mux = new Mux({ tokenId, tokenSecret });
-  return { video: mux.video };
-}
 
 export const requireAuth: RequestHandler = async (req, res, next) => {
   const user = await getUserFromRequest(req);
@@ -66,12 +57,31 @@ export const deleteVideo: RequestHandler = async (req, res) => {
   const user = await getUserFromRequest(req);
   if (!sb || !user) return res.status(401).json({ error: "UNAUTHORIZED" });
   const { id } = req.params as { id: string };
+  
+  // Buscar dados do vídeo antes de deletar
+  const { data: video } = await sb
+    .from("videos")
+    .select("video_path, capa_path, bucket")
+    .eq("id", id)
+    .eq("creator_id", user.id)
+    .single();
+
+  // Deletar registro do banco
   const { error } = await sb
     .from("videos")
     .delete()
     .eq("id", id)
     .eq("creator_id", user.id);
   if (error) return res.status(500).json({ error: error.message });
+
+  // Deletar arquivos do storage se existirem
+  if (video?.video_path) {
+    await sb.storage.from(video.bucket || "videos").remove([video.video_path]);
+  }
+  if (video?.capa_path) {
+    await sb.storage.from("covers").remove([video.capa_path]);
+  }
+
   res.json({ ok: true });
 };
 
@@ -79,11 +89,25 @@ export const dashboard: RequestHandler = async (req, res) => {
   const sb = getAdminClient();
   const user = await getUserFromRequest(req);
   if (!sb || !user) return res.status(401).json({ error: "UNAUTHORIZED" });
+  
+  // Buscar estatísticas dos vídeos
+  const { data: videosData } = await sb
+    .from("videos")
+    .select("id, aprovado, custo_mensal, created_at")
+    .eq("creator_id", user.id);
+
+  const videos = videosData || [];
+  const totalVideos = videos.length;
+  const videosAprovados = videos.filter(v => v.aprovado).length;
+  const custoMensalTotal = videos.reduce((sum, v) => sum + (Number(v.custo_mensal) || 0), 0);
+
+  // Buscar ganhos (se existirem)
   const { data: rows } = await sb
     .from("earnings")
     .select("receita_total, comissao_criador, comissao_plataforma, mes_ref")
     .eq("creator_id", user.id)
     .order("mes_ref", { ascending: false });
+  
   const totals = (rows ?? []).reduce(
     (acc, r) => {
       acc.receita_total += Number(r.receita_total || 0);
@@ -93,96 +117,152 @@ export const dashboard: RequestHandler = async (req, res) => {
     },
     { receita_total: 0, comissao_criador: 0, comissao_plataforma: 0 },
   );
-  res.json({ totals, rows: rows ?? [] });
+
+  res.json({ 
+    totals, 
+    rows: rows ?? [],
+    stats: {
+      totalVideos,
+      videosAprovados,
+      custoMensalTotal
+    }
+  });
 };
 
-export const requestUpload: RequestHandler = async (req, res) => {
-  const mux = getMux();
+export const createVideoUpload: RequestHandler = async (req, res) => {
   const sb = getAdminClient();
   const user = await getUserFromRequest(req);
-  if (!mux || !sb || !user)
-    return res.status(400).json({ error: "CONFIG_MISSING" });
-  const { title, description, tags, coverUrl } = (req.body || {}) as {
-    title?: string;
-    description?: string;
-    tags?: string[] | string;
-    coverUrl?: string;
+  if (!sb || !user) return res.status(400).json({ error: "CONFIG_MISSING" });
+  
+  const { 
+    titulo, 
+    descricao, 
+    formato,
+    generos,
+    projeto,
+    capaUrl,
+    duracaoMinutos 
+  } = (req.body || {}) as {
+    titulo?: string;
+    descricao?: string;
+    formato?: string;
+    generos?: string[];
+    projeto?: string;
+    capaUrl?: string;
+    duracaoMinutos?: number;
   };
 
   try {
-    const upload = await mux.video.uploads.create({
-      cors_origin: "*",
-      new_asset_settings: { playback_policy: ["public"] },
-    });
+    // Calcular custo baseado na duração
+    const duracao = duracaoMinutos || 0;
+    let custo = 0;
+    if (duracao > 70) {
+      const blocosExtras = Math.ceil((duracao - 70) / 70);
+      custo = blocosExtras * 1000;
+    }
 
-    // create a pending row
-    const { error } = await sb.from("videos").insert({
-      id: upload.id,
-      creator_id: user.id,
-      titulo: title ?? "",
-      descricao: description ?? "",
-      tags: Array.isArray(tags) ? tags : tags ? [tags] : [],
-      capa_url: coverUrl ?? null,
-      status: "pending_upload",
-      mux_asset_id: null,
-      playback_id: null,
-    });
-    if (error) console.error("insert video row error", error);
+    // Gerar signed URL para upload do vídeo
+    const videoFilename = `${Date.now()}-video.mp4`;
+    const videoPath = `${user.id}/${videoFilename}`;
+    const bucket = "videos";
 
-    res.json({ uploadUrl: upload.url, uploadId: upload.id });
-  } catch (e: any) {
-    const status = e?.status || e?.statusCode;
-    const msg = e?.message || String(e);
-    const isUnauthorized = status === 401 || /unauthorized/i.test(msg || "");
-    res
-      .status(isUnauthorized ? 401 : 500)
-      .json({
-        error: isUnauthorized ? "MUX_UNAUTHORIZED" : "MUX_CREATE_UPLOAD_FAILED",
-        message: msg,
+    const { data: signedData, error: signedError } = await sb.storage
+      .from(bucket)
+      .createSignedUploadUrl(videoPath);
+
+    if (signedError) {
+      return res.status(500).json({ 
+        error: "SIGNED_URL_FAILED", 
+        message: signedError.message 
       });
+    }
+
+    // Criar registro no banco
+    const { data: videoData, error: insertError } = await sb
+      .from("videos")
+      .insert({
+        creator_id: user.id,
+        titulo: titulo || "Sem título",
+        descricao: descricao || "",
+        formato: formato || null,
+        generos: generos || [],
+        capa_url: capaUrl || null,
+        bucket,
+        video_path: videoPath,
+        duracao_minutos: duracao,
+        custo_mensal: custo,
+        status: "uploading"
+      })
+      .select()
+      .single();
+
+    if (insertError) {
+      return res.status(500).json({ 
+        error: "DATABASE_ERROR", 
+        message: insertError.message 
+      });
+    }
+
+    res.json({ 
+      uploadUrl: signedData.signedUrl,
+      uploadToken: signedData.token,
+      videoId: videoData.id,
+      videoPath,
+      bucket
+    });
+  } catch (e: any) {
+    res.status(500).json({
+      error: "CREATE_UPLOAD_FAILED",
+      message: e?.message || String(e),
+    });
   }
 };
 
-export const uploadComplete: RequestHandler = async (req, res) => {
-  const mux = getMux();
+export const completeVideoUpload: RequestHandler = async (req, res) => {
   const sb = getAdminClient();
   const user = await getUserFromRequest(req);
-  if (!mux || !sb || !user)
-    return res.status(400).json({ error: "CONFIG_MISSING" });
-  const { uploadId } = (req.body || {}) as { uploadId?: string };
-  if (!uploadId) return res.status(400).json({ error: "BAD_REQUEST" });
+  if (!sb || !user) return res.status(400).json({ error: "CONFIG_MISSING" });
+  
+  const { videoId } = (req.body || {}) as { videoId?: string };
+  if (!videoId) return res.status(400).json({ error: "BAD_REQUEST" });
+
   try {
-    const upload = await mux.video.uploads.retrieve(uploadId);
-    let playbackId: string | null = null;
-    if (upload.asset_id) {
-      const asset = await mux.video.assets.retrieve(upload.asset_id);
-      playbackId = asset.playback_ids?.[0]?.id ?? null;
-      await sb
-        .from("videos")
-        .update({
-          mux_asset_id: upload.asset_id,
-          playback_id: playbackId,
-          status: asset.status,
-        })
-        .eq("id", uploadId)
-        .eq("creator_id", user.id);
-    } else {
-      await sb
-        .from("videos")
-        .update({ status: "processing" })
-        .eq("id", uploadId)
-        .eq("creator_id", user.id);
-    }
-    res.json({ ok: true, uploadId, playbackId });
-  } catch (e: any) {
-    const status = e?.status || e?.statusCode;
-    const msg = e?.message || String(e);
-    const isUnauthorized = status === 401 || /unauthorized/i.test(msg || "");
-    res
-      .status(isUnauthorized ? 401 : 500)
-      .json({
-        error: isUnauthorized ? "MUX_UNAUTHORIZED" : "MUX_UPLOAD_CHECK_FAILED",
-        message: msg,
+    // Atualizar status do vídeo
+    const { data: video, error } = await sb
+      .from("videos")
+      .update({ 
+        status: "uploaded",
+        video_url: null // Será preenchida quando aprovarmos
+      })
+      .eq("id", videoId)
+      .eq("creator_id", user.id)
+      .select()
+      .single();
+
+    if (error) {
+      return res.status(500).json({ 
+        error: "UPDATE_FAILED", 
+        message: error.message 
       });
+    }
+
+    // Gerar URL pública do vídeo
+    if (video.video_path) {
+      const { data: publicUrl } = sb.storage
+        .from(video.bucket || "videos")
+        .getPublicUrl(video.video_path);
+      
+      await sb
+        .from("videos")
+        .update({ video_url: publicUrl.publicUrl })
+        .eq("id", videoId);
+    }
+
+    res.json({ ok: true, videoId, video });
+  } catch (e: any) {
+    res.status(500).json({
+      error: "COMPLETE_UPLOAD_FAILED",
+      message: e?.message || String(e),
+    });
   }
 };

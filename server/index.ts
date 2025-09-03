@@ -14,8 +14,8 @@ import {
   listMyVideos as creatorList,
   deleteVideo as creatorDelete,
   dashboard as creatorDashboard,
-  requestUpload as creatorRequestUpload,
-  uploadComplete as creatorUploadComplete,
+  createVideoUpload as creatorCreateUpload,
+  completeVideoUpload as creatorCompleteUpload,
 } from "./routes/creators";
 import { createSignedUrl, createSignedUpload } from "./routes/storage";
 
