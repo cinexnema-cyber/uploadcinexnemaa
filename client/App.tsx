@@ -7,9 +7,10 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route, Link, Outlet } from "react-router-dom";
 import Index from "./pages/Index";
-import NotFound from "./pages/NotFound";
-import Admin from "./pages/Admin";
 import Creator from "./pages/Creator";
+import Content from "./pages/Content";
+import Admin from "./pages/Admin";
+import NotFound from "./pages/NotFound";
 import UploadFilme from "./pages/criadores/UploadFilme";
 
 const queryClient = new QueryClient();
@@ -31,6 +32,24 @@ function Layout() {
               className="px-3 py-2 rounded-md text-white/80 hover:text-white hover:bg-white/10"
             >
               Upload
+            </Link>
+            <Link
+              to="/creator"
+              className="px-3 py-2 rounded-md text-white/80 hover:text-white hover:bg-white/10"
+            >
+              Criador
+            </Link>
+            <Link
+              to="/content"
+              className="px-3 py-2 rounded-md text-white/80 hover:text-white hover:bg-white/10"
+            >
+              Conteúdos
+            </Link>
+            <Link
+              to="/admin"
+              className="px-3 py-2 rounded-md text-white/80 hover:text-white hover:bg-white/10"
+            >
+              Admin
             </Link>
           </nav>
         </div>
@@ -55,6 +74,10 @@ const App = () => (
         <Routes>
           <Route element={<Layout />}>
             <Route path="/" element={<Index />} />
+            <Route path="/creator" element={<Creator />} />
+            <Route path="/content" element={<Content />} />
+            <Route path="/admin" element={<Admin />} />
+            <Route path="/criadores/upload" element={<UploadFilme />} />
             {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
             <Route path="*" element={<NotFound />} />
           </Route>
