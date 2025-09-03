@@ -19,6 +19,7 @@ import TestAuth from "./pages/TestAuth";
 import DiagnosticAuth from "./pages/DiagnosticAuth";
 import SupabaseDiagnostic from "./pages/SupabaseDiagnostic";
 import TestUpload from "./pages/TestUpload";
+import GuideStatus from "./pages/GuideStatus";
 import ErrorBoundary from "./components/ErrorBoundary";
 
 const queryClient = new QueryClient();
@@ -83,6 +84,18 @@ function Layout() {
             >
               🔧 Storage
             </Link>
+            <Link
+              to="/test-upload"
+              className="px-3 py-2 rounded-md text-green-400 hover:text-green-300 hover:bg-white/10"
+            >
+              🧪 Test
+            </Link>
+            <Link
+              to="/guide"
+              className="px-3 py-2 rounded-md text-orange-400 hover:text-orange-300 hover:bg-white/10"
+            >
+              📚 Guia
+            </Link>
           </nav>
         </div>
       </header>
@@ -116,6 +129,7 @@ function App() {
                 <Route path="/diagnostic-auth" element={<DiagnosticAuth />} />
                 <Route path="/supabase-diagnostic" element={<SupabaseDiagnostic />} />
                 <Route path="/test-upload" element={<TestUpload />} />
+                <Route path="/guide" element={<GuideStatus />} />
                 <Route path="/upload-complete" element={<UploadComplete />} />
                 <Route path="/criadores/upload" element={<UploadFilme />} />
                 {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
