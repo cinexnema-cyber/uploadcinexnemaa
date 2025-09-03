@@ -39,6 +39,7 @@ export function createServer() {
   // Video routes
   app.get("/api/videos/public", listPublic);
   app.get("/api/videos", listAll);
+  app.get("/api/videos/config", getConfig);
   app.post("/api/videos/submit", submit);
   app.post("/api/videos/:id/approve", approveVideo);
   app.post("/api/videos/:id/revoke", revokeVideo);

@@ -4,16 +4,20 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
 import { toast } from "sonner";
-import * as tus from "tus-js-client";
 
 interface VideoRow {
   id: string;
   titulo: string;
   descricao: string | null;
   capa_url: string | null;
+  video_url: string | null;
   status: string;
-  playback_id: string | null;
+  aprovado: boolean;
   created_at: string;
+  formato: string | null;
+  generos: string[] | null;
+  duracao_minutos: number | null;
+  custo_mensal: number;
 }
 
 export default function Creator() {
@@ -37,8 +41,7 @@ export default function Creator() {
             Conecte o Supabase para habilitar login e recursos do criador.
           </p>
           <p className="text-white/60 text-xs">
-            Clique em “Open MCP popover” e conecte o Supabase, ou informe
-            VITE_SUPABASE_URL e VITE_SUPABASE_ANON_KEY.
+            Configure as variáveis VITE_SUPABASE_URL e VITE_SUPABASE_ANON_KEY.
           </p>
         </div>
       </div>
@@ -52,39 +55,41 @@ function Auth() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
+  const [isSignUp, setIsSignUp] = useState(false);
 
-  async function handleSignIn(e: React.FormEvent) {
+  async function handleAuth(e: React.FormEvent) {
     e.preventDefault();
     if (!supabase) return;
     setLoading(true);
-    const { error } = await supabase.auth.signInWithPassword({
-      email,
-      password,
-    });
-    if (error) toast.error(error.message);
+    
+    if (isSignUp) {
+      const { error } = await supabase.auth.signUp({ email, password });
+      if (error) toast.error(error.message);
+      else toast.success("Conta criada. Verifique seu email e faça login.");
+    } else {
+      const { error } = await supabase.auth.signInWithPassword({ email, password });
+      if (error) toast.error(error.message);
+    }
+    
     setLoading(false);
-  }
-
-  async function handleSignUp() {
-    if (!supabase) return;
-    const { error } = await supabase.auth.signUp({ email, password });
-    if (error) toast.error(error.message);
-    else toast.success("Conta criada. Faça login.");
   }
 
   return (
     <div className="min-h-screen grid place-items-center text-white">
       <form
-        onSubmit={handleSignIn}
+        onSubmit={handleAuth}
         className="w-full max-w-sm space-y-3 border border-white/10 bg-white/5 p-6 rounded-xl"
       >
-        <h1 className="text-xl font-semibold">Área do Criador</h1>
+        <h1 className="text-xl font-semibold">
+          {isSignUp ? "Criar Conta" : "Área do Criador"}
+        </h1>
         <Input
           type="email"
           placeholder="Email"
           value={email}
           onChange={(e) => setEmail(e.target.value)}
           className="bg-transparent border-white/20 text-white"
+          required
         />
         <Input
           type="password"
@@ -92,6 +97,7 @@ function Auth() {
           value={password}
           onChange={(e) => setPassword(e.target.value)}
           className="bg-transparent border-white/20 text-white"
+          required
         />
         <div className="flex gap-2">
           <Button
@@ -99,16 +105,16 @@ function Auth() {
             className="bg-emerald-500 hover:bg-emerald-500/90 text-black"
             disabled={loading}
           >
-            Entrar
+            {loading ? "..." : isSignUp ? "Criar conta" : "Entrar"}
           </Button>
           <Button
             type="button"
             variant="outline"
             className="border-white/20 text-white"
-            onClick={handleSignUp}
+            onClick={() => setIsSignUp(!isSignUp)}
             disabled={loading}
           >
-            Criar conta
+            {isSignUp ? "Fazer login" : "Criar conta"}
           </Button>
         </div>
       </form>
@@ -119,23 +125,22 @@ function Auth() {
 function Dashboard() {
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
-  const [tags, setTags] = useState("");
+  const [format, setFormat] = useState<"Filme" | "Série" | "Seriado">("Filme");
+  const [genres, setGenres] = useState<string[]>([]);
+  const [duration, setDuration] = useState("");
   const [cover, setCover] = useState<File | null>(null);
   const [coverUrl, setCoverUrl] = useState<string | null>(null);
   const [video, setVideo] = useState<File | null>(null);
   const [isUploading, setIsUploading] = useState(false);
   const [progress, setProgress] = useState(0);
-  const [uploadedBytes, setUploadedBytes] = useState(0);
-  const [totalBytes, setTotalBytes] = useState(0);
-  const [uploadStartAt, setUploadStartAt] = useState<number | null>(null);
   const [items, setItems] = useState<VideoRow[]>([]);
+  const [stats, setStats] = useState<any>({});
 
-  const canSend = useMemo(() => !!video && !isUploading, [video, isUploading]);
+  const canSend = useMemo(() => !!video && !!title && !isUploading, [video, title, isUploading]);
 
   async function load() {
     try {
-      const token = (await supabase?.auth.getSession())?.data.session
-        ?.access_token;
+      const token = (await supabase?.auth.getSession())?.data.session?.access_token;
       const res = await fetch("/api/creators/videos", {
         headers: { Authorization: `Bearer ${token}` },
       });
@@ -149,127 +154,142 @@ function Dashboard() {
       console.error("Erro ao carregar vídeos:", error);
     }
   }
+
+  async function loadDashboard() {
+    try {
+      const token = (await supabase?.auth.getSession())?.data.session?.access_token;
+      const res = await fetch("/api/creators/dashboard", {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      if (!res.ok) return;
+      const data = await res.json();
+      setStats(data.stats || {});
+    } catch (error) {
+      console.error("Erro ao carregar dashboard:", error);
+    }
+  }
+
   useEffect(() => {
     load();
+    loadDashboard();
   }, []);
 
   async function uploadCoverNow() {
     if (!cover) return;
-    const token = (await supabase?.auth.getSession())?.data.session
-      ?.access_token;
-    const fd = new FormData();
-    fd.append("file", cover);
-    const res = await fetch("/api/creators/cover", {
-      method: "POST",
-      headers: { Authorization: `Bearer ${token}` },
-      body: fd,
-    });
-
-    if (!res.ok) {
-      let errorMessage = "Erro ao enviar capa";
-      try {
-        const errorData = await res.json();
-        errorMessage = errorData?.message || errorMessage;
-      } catch {
-        // Se falhar ao ler o JSON, usa a mensagem padrão
+    try {
+      const token = (await supabase?.auth.getSession())?.data.session?.access_token;
+      const fd = new FormData();
+      fd.append("file", cover);
+      const res = await fetch("/api/creators/cover", {
+        method: "POST",
+        headers: { Authorization: `Bearer ${token}` },
+        body: fd,
+      });
+      
+      if (!res.ok) {
+        let errorMessage = "Erro ao enviar capa";
+        try {
+          const errorData = await res.json();
+          errorMessage = errorData?.message || errorMessage;
+        } catch {
+          // Se falhar ao ler o JSON, usa a mensagem padrão
+        }
+        return toast.error(errorMessage);
       }
-      return toast.error(errorMessage);
+      
+      const data = await res.json();
+      setCoverUrl(data.url);
+      toast.success("Capa enviada");
+    } catch (error) {
+      toast.error("Erro ao enviar capa");
     }
-
-    const data = await res.json();
-    setCoverUrl(data.url);
-    toast.success("Capa enviada");
   }
 
   async function handleUpload() {
-    if (!video) return;
+    if (!video || !title) return;
     setIsUploading(true);
     setProgress(0);
-    setUploadedBytes(0);
-    setTotalBytes(video.size);
-    setUploadStartAt(Date.now());
+
     try {
-      const token = (await supabase?.auth.getSession())?.data.session
-        ?.access_token;
-      const start = await fetch("/api/creators/upload", {
+      const token = (await supabase?.auth.getSession())?.data.session?.access_token;
+      
+      // 1. Criar upload
+      const createRes = await fetch("/api/creators/upload", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
           Authorization: `Bearer ${token}`,
         },
         body: JSON.stringify({
-          title,
-          description,
-          tags: tags
-            .split(",")
-            .map((s) => s.trim())
-            .filter(Boolean),
-          coverUrl,
+          titulo: title,
+          descricao: description,
+          formato: format,
+          generos: genres,
+          capaUrl: coverUrl,
+          duracaoMinutos: parseInt(duration) || 0,
         }),
       });
-
-      if (!start.ok) {
+      
+      if (!createRes.ok) {
         let errorMessage = "Falha ao iniciar upload";
         try {
-          const errorData = await start.json();
+          const errorData = await createRes.json();
           errorMessage = errorData?.error || errorMessage;
         } catch {
           // Se falhar ao ler o JSON, usa a mensagem padrão
         }
-        toast.error(errorMessage);
-        setIsUploading(false);
-        return;
+        throw new Error(errorMessage);
       }
+      
+      const { uploadUrl, uploadToken, videoId } = await createRes.json();
 
-      const payload = await start.json();
-      const { uploadUrl, uploadId } = payload as {
-        uploadUrl: string;
-        uploadId: string;
-      };
-
-      await new Promise<void>((resolve, reject) => {
-        const up = new tus.Upload(video, {
-          endpoint: uploadUrl,
-          uploadUrl,
-          chunkSize: 5 * 1024 * 1024,
-          retryDelays: [0, 1000, 3000, 5000],
-          metadata: { filename: video.name, filetype: video.type },
-          onError(error) {
-            reject(error);
-          },
-          onProgress(bytesUploaded, bytesTotal) {
-            setUploadedBytes(bytesUploaded);
-            setTotalBytes(bytesTotal);
-            setProgress(Math.round((bytesUploaded / bytesTotal) * 100));
-          },
-          onSuccess() {
-            resolve();
-          },
-        });
-        up.start();
+      // 2. Upload direto via signed URL
+      setProgress(50);
+      const uploadRes = await fetch(uploadUrl, {
+        method: "PUT",
+        body: video,
+        headers: {
+          "Content-Type": video.type,
+          "Authorization": `Bearer ${uploadToken}`,
+        },
       });
 
-      await fetch("/api/creators/upload-complete", {
+      if (!uploadRes.ok) {
+        throw new Error("Falha no upload do arquivo");
+      }
+
+      setProgress(90);
+
+      // 3. Completar upload
+      const completeRes = await fetch("/api/creators/upload-complete", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
           Authorization: `Bearer ${token}`,
         },
-        body: JSON.stringify({ uploadId }),
+        body: JSON.stringify({ videoId }),
       });
 
-      toast.success("Upload concluído e em processamento");
+      if (!completeRes.ok) {
+        throw new Error("Falha ao completar upload");
+      }
+
+      setProgress(100);
+      toast.success("Upload concluído!");
+      
+      // Reset form
       setTitle("");
       setDescription("");
-      setTags("");
+      setFormat("Filme");
+      setGenres([]);
+      setDuration("");
       setCover(null);
       setCoverUrl(null);
       setVideo(null);
       setProgress(0);
-      setUploadedBytes(0);
-      setTotalBytes(0);
-      setUploadStartAt(null);
+      
       await load();
+      await loadDashboard();
     } catch (e: any) {
       toast.error(e?.message || String(e));
     } finally {
@@ -277,58 +297,128 @@ function Dashboard() {
     }
   }
 
-  function formatETA() {
-    if (
-      !uploadStartAt ||
-      uploadedBytes <= 0 ||
-      totalBytes <= 0 ||
-      uploadedBytes >= totalBytes
-    )
-      return "";
-    const elapsed = (Date.now() - uploadStartAt) / 1000;
-    const speed = uploadedBytes / Math.max(elapsed, 0.001);
-    const remaining = Math.max(totalBytes - uploadedBytes, 0);
-    const seconds = Math.round(remaining / Math.max(speed, 1));
-    const mm = String(Math.floor(seconds / 60)).padStart(2, "0");
-    const ss = String(seconds % 60).padStart(2, "0");
-    return `~${mm}:${ss} restante`;
+  function calculateCost(minutes: string) {
+    const mins = parseInt(minutes) || 0;
+    if (mins <= 70) return 0;
+    const extraBlocks = Math.ceil((mins - 70) / 70);
+    return extraBlocks * 1000;
   }
-  function formatSpeed() {
-    if (!uploadStartAt || uploadedBytes <= 0) return "";
-    const elapsed = (Date.now() - uploadStartAt) / 1000;
-    const bps = uploadedBytes / Math.max(elapsed, 0.001);
-    const mbps = bps / (1024 * 1024);
-    return `${mbps.toFixed(2)} MB/s`;
-  }
+
+  const estimatedCost = calculateCost(duration);
 
   return (
     <div className="min-h-screen text-white">
       <section className="container mx-auto px-4 py-10 md:py-16">
-        <h1 className="text-3xl md:text-4xl font-extrabold">Área do Criador</h1>
-        <p className="text-white/70">Envie vídeos e gerencie seus conteúdos.</p>
+        <div className="flex items-center justify-between mb-8">
+          <div>
+            <h1 className="text-3xl md:text-4xl font-extrabold">Área do Criador</h1>
+            <p className="text-white/70">Gerencie seus conteúdos e uploads.</p>
+          </div>
+          <Button
+            variant="outline"
+            className="border-white/20 text-white"
+            onClick={() => supabase?.auth.signOut()}
+          >
+            Sair
+          </Button>
+        </div>
 
-        <div className="mt-8 grid lg:grid-cols-[1.1fr,0.9fr] gap-8">
+        {/* Estatísticas */}
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-8">
+          <div className="bg-white/5 border border-white/10 rounded-lg p-4">
+            <div className="text-2xl font-bold text-emerald-400">{stats.totalVideos || 0}</div>
+            <div className="text-sm text-white/70">Total de Vídeos</div>
+          </div>
+          <div className="bg-white/5 border border-white/10 rounded-lg p-4">
+            <div className="text-2xl font-bold text-blue-400">{stats.videosAprovados || 0}</div>
+            <div className="text-sm text-white/70">Aprovados</div>
+          </div>
+          <div className="bg-white/5 border border-white/10 rounded-lg p-4">
+            <div className="text-2xl font-bold text-amber-400">R$ {stats.custoMensalTotal || 0}</div>
+            <div className="text-sm text-white/70">Custo Mensal</div>
+          </div>
+          <div className="bg-white/5 border border-white/10 rounded-lg p-4">
+            <div className="text-2xl font-bold text-purple-400">
+              {((stats.videosAprovados || 0) / Math.max(stats.totalVideos || 1, 1) * 100).toFixed(0)}%
+            </div>
+            <div className="text-sm text-white/70">Taxa de Aprovação</div>
+          </div>
+        </div>
+
+        <div className="grid lg:grid-cols-[1.1fr,0.9fr] gap-8">
           <div className="rounded-2xl border border-white/10 bg-white/5 p-6">
-            <h2 className="text-xl font-semibold mb-4">Novo envio</h2>
-            <div className="grid gap-3">
+            <h2 className="text-xl font-semibold mb-4">Novo Upload</h2>
+            <div className="grid gap-4">
               <Input
-                placeholder="Título do vídeo"
+                placeholder="Título do vídeo *"
                 value={title}
                 onChange={(e) => setTitle(e.target.value)}
                 className="bg-transparent border-white/20 text-white"
+                required
               />
-              <Input
+              <textarea
                 placeholder="Descrição"
                 value={description}
                 onChange={(e) => setDescription(e.target.value)}
-                className="bg-transparent border-white/20 text-white"
+                className="bg-transparent border border-white/20 text-white rounded-md p-3 min-h-[80px] resize-none"
               />
-              <Input
-                placeholder="Tags (separadas por vírgula)"
-                value={tags}
-                onChange={(e) => setTags(e.target.value)}
-                className="bg-transparent border-white/20 text-white"
-              />
+              
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <label className="text-sm text-white/70 mb-2 block">Formato</label>
+                  <select
+                    value={format}
+                    onChange={(e) => setFormat(e.target.value as any)}
+                    className="w-full bg-transparent border border-white/20 text-white rounded-md p-3"
+                  >
+                    <option className="text-black" value="Filme">Filme</option>
+                    <option className="text-black" value="Série">Série</option>
+                    <option className="text-black" value="Seriado">Seriado</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="text-sm text-white/70 mb-2 block">Duração (minutos)</label>
+                  <Input
+                    type="number"
+                    placeholder="Ex: 90"
+                    value={duration}
+                    onChange={(e) => setDuration(e.target.value)}
+                    className="bg-transparent border-white/20 text-white"
+                  />
+                  {estimatedCost > 0 && (
+                    <div className="text-xs text-amber-400 mt-1">
+                      Custo estimado: R$ {estimatedCost}/mês
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              <div>
+                <label className="text-sm text-white/70 mb-2 block">Gêneros</label>
+                <div className="flex flex-wrap gap-2">
+                  {["Ação", "Terror", "Drama", "Comédia", "Ficção", "Documentário", "Romance"].map((g) => (
+                    <label
+                      key={g}
+                      className="inline-flex items-center gap-2 text-sm bg-white/5 border border-white/10 rounded px-3 py-1"
+                    >
+                      <input
+                        type="checkbox"
+                        className="accent-emerald-500"
+                        checked={genres.includes(g)}
+                        onChange={(e) =>
+                          setGenres((prev) =>
+                            e.target.checked
+                              ? [...prev, g]
+                              : prev.filter((x) => x !== g),
+                          )
+                        }
+                      />
+                      <span>{g}</span>
+                    </label>
+                  ))}
+                </div>
+              </div>
+
               <div className="flex items-center gap-3">
                 <Input
                   type="file"
@@ -344,70 +434,41 @@ function Dashboard() {
                   Enviar capa
                 </Button>
                 {coverUrl && (
-                  <span className="text-xs text-emerald-300">Capa pronta</span>
+                  <span className="text-xs text-emerald-300">✓ Capa pronta</span>
                 )}
               </div>
+
               <div className="flex items-center gap-3">
                 <Input
                   type="file"
                   accept="video/*"
                   onChange={(e) => setVideo(e.target.files?.[0] || null)}
-                  className="sr-only"
-                  id="creator-video-input"
+                  className="bg-transparent border-white/20 text-white"
                 />
-                <Button
-                  type="button"
-                  onClick={() =>
-                    document.getElementById("creator-video-input")?.click()
-                  }
-                  className="bg-gradient-to-r from-emerald-400 to-cyan-400 text-black font-semibold shadow-lg hover:from-emerald-300 hover:to-cyan-300"
-                >
-                  Escolher vídeo
-                </Button>
                 {video && (
-                  <span className="text-xs text-white/70 truncate max-w-[50%]">
+                  <span className="text-xs text-white/70 truncate max-w-[200px]">
                     {video.name}
                   </span>
                 )}
               </div>
-              <div className="flex gap-2">
-                <Button
-                  onClick={handleUpload}
-                  disabled={!canSend}
-                  className="bg-emerald-500 hover:bg-emerald-500/90 text-black"
-                >
-                  {isUploading ? `Enviando ${progress}%` : "Enviar vídeo"}
-                </Button>
-                <Button
-                  variant="outline"
-                  className="border-white/20 text-white"
-                  onClick={() => supabase?.auth.signOut()}
-                >
-                  Sair
-                </Button>
-              </div>
+
+              <Button
+                onClick={handleUpload}
+                disabled={!canSend}
+                className="bg-emerald-500 hover:bg-emerald-500/90 text-black"
+              >
+                {isUploading ? `Enviando ${progress}%` : "Enviar vídeo"}
+              </Button>
+
               {isUploading && (
-                <div className="mt-2">
-                  <Progress value={progress} className="h-2 bg-white/10" />
-                  <div className="text-xs text-white/70 mt-2 grid grid-cols-1 sm:grid-cols-4 gap-2">
-                    <span>{progress}%</span>
-                    <span>
-                      {Math.round(uploadedBytes / (1024 * 1024))} MB /{" "}
-                      {Math.max(1, Math.round(totalBytes / (1024 * 1024)))} MB
-                    </span>
-                    <span>{formatSpeed()}</span>
-                    <span className="text-right sm:text-left">
-                      {formatETA()}
-                    </span>
-                  </div>
-                </div>
+                <Progress value={progress} className="h-2 bg-white/10" />
               )}
             </div>
           </div>
 
           <div className="rounded-2xl border border-white/10 bg-white/5 p-6">
-            <h2 className="text-xl font-semibold mb-4">Seus vídeos</h2>
-            <div className="grid gap-3">
+            <h2 className="text-xl font-semibold mb-4">Seus Vídeos</h2>
+            <div className="grid gap-3 max-h-[600px] overflow-y-auto">
               {items.length === 0 && (
                 <div className="text-white/60 text-sm">
                   Nenhum vídeo enviado.
@@ -418,11 +479,12 @@ function Dashboard() {
                   key={v.id}
                   className="flex items-center gap-3 p-3 rounded-lg border border-white/10 bg-black/30"
                 >
-                  <div className="w-24 aspect-video bg-white/10 rounded overflow-hidden">
-                    {v.playback_id ? (
+                  <div className="w-16 aspect-video bg-white/10 rounded overflow-hidden">
+                    {v.capa_url ? (
                       <img
-                        src={`https://image.mux.com/${v.playback_id}/thumbnail.webp?time=1`}
+                        src={v.capa_url}
                         className="w-full h-full object-cover"
+                        alt="Capa"
                       />
                     ) : (
                       <div className="w-full h-full grid place-items-center text-white/40 text-xs">
@@ -432,14 +494,25 @@ function Dashboard() {
                   </div>
                   <div className="flex-1 min-w-0">
                     <div className="font-medium truncate">{v.titulo}</div>
-                    <div className="text-xs text-white/60">
-                      {new Date(v.created_at).toLocaleString()}
+                    <div className="text-xs text-white/60 flex items-center gap-2">
+                      <span>{new Date(v.created_at).toLocaleDateString()}</span>
+                      {v.aprovado ? (
+                        <span className="text-emerald-400">✓ Aprovado</span>
+                      ) : (
+                        <span className="text-amber-400">Pendente</span>
+                      )}
                     </div>
+                    {v.custo_mensal > 0 && (
+                      <div className="text-xs text-amber-300">
+                        R$ {v.custo_mensal}/mês
+                      </div>
+                    )}
                   </div>
                   <Button
                     variant="outline"
-                    className="border-white/20 text-white"
-                    onClick={() => onDelete(v.id, setItems)}
+                    size="sm"
+                    className="border-white/20 text-white text-xs"
+                    onClick={() => onDelete(v.id)}
                   >
                     Excluir
                   </Button>
@@ -451,27 +524,20 @@ function Dashboard() {
       </section>
     </div>
   );
-}
 
-async function onDelete(id: string, setItems: (rows: any) => void) {
-  const token = (await supabase?.auth.getSession())?.data.session?.access_token;
-  const res = await fetch(`/api/creators/video/${id}`, {
-    method: "DELETE",
-    headers: { Authorization: `Bearer ${token}` },
-  });
-  if (!res.ok) return toast.error("Erro ao excluir");
-
-  try {
-    const list = await fetch("/api/creators/videos", {
-      headers: { Authorization: `Bearer ${token}` },
-    });
-    if (!list.ok) {
-      console.error("Erro ao recarregar lista de vídeos");
-      return;
+  async function onDelete(id: string) {
+    try {
+      const token = (await supabase?.auth.getSession())?.data.session?.access_token;
+      const res = await fetch(`/api/creators/video/${id}`, {
+        method: "DELETE",
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      if (!res.ok) return toast.error("Erro ao excluir");
+      toast.success("Vídeo excluído");
+      await load();
+      await loadDashboard();
+    } catch (error) {
+      toast.error("Erro ao excluir vídeo");
     }
-    const data = await list.json();
-    setItems(data.videos ?? []);
-  } catch (error) {
-    console.error("Erro ao recarregar lista:", error);
   }
 }
