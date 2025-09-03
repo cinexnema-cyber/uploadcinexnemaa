@@ -314,13 +314,21 @@ function Dashboard() {
             <h1 className="text-3xl md:text-4xl font-extrabold">Área do Criador</h1>
             <p className="text-white/70">Gerencie seus conteúdos e uploads.</p>
           </div>
-          <Button
-            variant="outline"
-            className="border-white/20 text-white"
-            onClick={() => supabase?.auth.signOut()}
-          >
-            Sair
-          </Button>
+          <div className="flex gap-2">
+            <Button
+              onClick={() => window.location.href = "/upload-complete"}
+              className="bg-emerald-500 hover:bg-emerald-500/90 text-black"
+            >
+              📋 Upload Completo
+            </Button>
+            <Button
+              variant="outline"
+              className="border-white/20 text-white"
+              onClick={() => supabase?.auth.signOut()}
+            >
+              Sair
+            </Button>
+          </div>
         </div>
 
         {/* Estatísticas */}
