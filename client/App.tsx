@@ -13,6 +13,7 @@ import Content from "./pages/Content";
 import Admin from "./pages/Admin";
 import NotFound from "./pages/NotFound";
 import UploadFilme from "./pages/criadores/UploadFilme";
+import ErrorBoundary from "./components/ErrorBoundary";
 
 const queryClient = new QueryClient();
 
@@ -68,25 +69,27 @@ function Layout() {
 
 function App() {
   return (
-    <QueryClientProvider client={queryClient}>
-      <TooltipProvider>
-        <Toaster />
-        <Sonner />
-        <BrowserRouter>
-          <Routes>
-            <Route element={<Layout />}>
-              <Route path="/" element={<Index />} />
-              <Route path="/creator" element={<Creator />} />
-              <Route path="/content" element={<Content />} />
-              <Route path="/admin" element={<Admin />} />
-              <Route path="/criadores/upload" element={<UploadFilme />} />
-              {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
-              <Route path="*" element={<NotFound />} />
-            </Route>
-          </Routes>
-        </BrowserRouter>
-      </TooltipProvider>
-    </QueryClientProvider>
+    <ErrorBoundary>
+      <QueryClientProvider client={queryClient}>
+        <TooltipProvider>
+          <Toaster />
+          <Sonner />
+          <BrowserRouter>
+            <Routes>
+              <Route element={<Layout />}>
+                <Route path="/" element={<Index />} />
+                <Route path="/creator" element={<Creator />} />
+                <Route path="/content" element={<Content />} />
+                <Route path="/admin" element={<Admin />} />
+                <Route path="/criadores/upload" element={<UploadFilme />} />
+                {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
+                <Route path="*" element={<NotFound />} />
+              </Route>
+            </Routes>
+          </BrowserRouter>
+        </TooltipProvider>
+      </QueryClientProvider>
+    </ErrorBoundary>
   );
 }
 
